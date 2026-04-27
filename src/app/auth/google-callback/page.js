@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/slices/authSlice';
@@ -11,10 +11,7 @@ function setOnbCookie(val) {
   document.cookie = `pk_onb=${val}; path=/; max-age=86400; SameSite=Lax`;
 }
 
-// This page is the OAuth redirect target.
-// The backend has already set the access_token cookie.
-// We just need to fetch the user state and route them correctly.
-export default function GoogleCallbackPage() {
+function GoogleCallbackInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const dispatch     = useAppDispatch();
@@ -24,7 +21,7 @@ export default function GoogleCallbackPage() {
     const init = async () => {
       try {
         const res  = await userApi.getMe();
-        const data = res.data; // { user, plan, onboarding_complete, plan_selected }
+        const data = res.data;
         dispatch(setCredentials({
           user:                data.user,
           plan:                data.plan ?? 'free',
@@ -51,4 +48,12 @@ export default function GoogleCallbackPage() {
   }, []);
 
   return <PageLoader message="Signing you in…" />;
+}
+
+export default function GoogleCallbackPage() {
+  return (
+    <Suspense fallback={<PageLoader message="Signing you in…" />}>
+      <GoogleCallbackInner />
+    </Suspense>
+  );
 }
