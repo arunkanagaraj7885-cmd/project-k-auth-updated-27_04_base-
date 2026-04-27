@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Check, Zap, Lock } from 'lucide-react';
@@ -59,7 +59,7 @@ const PLANS = [
   },
 ];
 
-export default function PricingPage() {
+function PricingInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const dispatch     = useAppDispatch();
@@ -212,5 +212,13 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <PricingInner />
+    </Suspense>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Play, FileText, Briefcase,
@@ -191,10 +192,12 @@ export default function AppSidebar() {
         >
           {/* Avatar */}
           {user?.avatar_url ? (
-            <img
+            <Image
               src={user.avatar_url}
-              alt={user.name}
-              className="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-2 ring-slate-700"
+              alt={user.name || 'Avatar'}
+              width={32}
+              height={32}
+              className="rounded-full object-cover flex-shrink-0 ring-2 ring-slate-700"
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 ring-2 ring-slate-700">

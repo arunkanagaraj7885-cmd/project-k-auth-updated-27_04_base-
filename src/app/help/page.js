@@ -1,4 +1,3 @@
-'use client';
 import { HelpCircle } from 'lucide-react';
 
 export default function HelpPage() {
