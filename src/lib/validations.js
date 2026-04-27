@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 
 export const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -15,7 +16,8 @@ export const signupSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
   confirmPassword: z.string(),
   whatsappNumber: z.string()
-    .regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number'),
+    .min(1, 'WhatsApp number is required')
+    .refine((val) => isValidPhoneNumber(val), 'Enter a valid mobile number for the selected country'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],

@@ -1,11 +1,13 @@
 'use client';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { CheckCircle2, Chrome } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import Logo from '@/components/shared/Logo';
 import PasswordInput from '@/components/auth/PasswordInput';
 import OTPModal from '@/components/auth/OTPModal';
@@ -13,6 +15,7 @@ import { signupSchema } from '@/lib/validations';
 import { authApi } from '@/lib/api/auth';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/slices/authSlice';
+
 
 // Cookie helper (client-side) for onboarding step
 function setOnbCookie(val) {
@@ -33,6 +36,7 @@ export default function SignupPage() {
   const {
     register,
     handleSubmit,
+    control,
     getValues,
     formState: { errors },
   } = useForm({ resolver: zodResolver(signupSchema) });
@@ -54,21 +58,16 @@ export default function SignupPage() {
   /* ── WhatsApp OTP ─────────────────────────────────────────────────────── */
   const handleSendOtp = async () => {
     const phone = getValues('whatsappNumber');
-    if (!phone || phone.length !== 10) {
-      toast.error('Enter a valid 10-digit mobile number first.');
+    if (!phone) {
+      toast.error('Enter a valid mobile number first.');
       return;
     }
     setSendingOtp(true);
-    try {
-      await authApi.sendOtp(phone);
-      setCurrentPhone(phone);
-      setOtpModalOpen(true);
-      toast.success('OTP sent to your WhatsApp!');
-    } catch {
-      toast.error('Failed to send OTP. Try again.');
-    } finally {
-      setSendingOtp(false);
-    }
+    // DEMO: auto-verify without real OTP
+    await new Promise((r) => setTimeout(r, 500));
+    setPhoneVerified(true);
+    setSendingOtp(false);
+    toast.success('Phone verified!');
   };
 
   /* ── Form submit ──────────────────────────────────────────────────────── */
@@ -79,22 +78,27 @@ export default function SignupPage() {
     }
     setLoading(true);
     try {
-      const res = await authApi.register({
-        first_name: data.firstName,
-        last_name:  data.lastName,
-        email:      data.email,
-        password:   data.password,
-        whatsapp_number: data.whatsappNumber,
+      // DEMO: bypass real registration — accept any valid-format inputs
+      await fetch('/api/auth/demo-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email }),
       });
-      const { user } = res.data;
-      dispatch(setCredentials({ user, plan: 'free', onboarding_complete: false, plan_selected: false }));
-      // Mark onboarding step — user must choose a plan next
+      const demoUser = {
+        id: 'demo-001',
+        name: `${data.firstName} ${data.lastName}`,
+        email: data.email,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        avatar_url: null,
+        plan: 'free',
+      };
+      dispatch(setCredentials({ user: demoUser, plan: 'free', onboarding_complete: false, plan_selected: false }));
       setOnbCookie('plan');
-      toast.success('Account created! Choose a plan to continue.');
+      toast.success('Account created! Now choose your plan.');
       router.push('/pricing?onboarding=1');
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Registration failed. Try again.';
-      toast.error(msg);
+      toast.error('Something went wrong. Try again.');
     } finally {
       setLoading(false);
     }
@@ -207,17 +211,22 @@ export default function SignupPage() {
           {/* WhatsApp + Verify */}
           <div>
             <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 font-medium">
-                  +91
-                </span>
-                <input
-                  {...register('whatsappNumber')}
-                  type="tel"
-                  placeholder="WhatsApp number"
-                  className={`input-base pl-10 ${errors.whatsappNumber ? 'error' : ''}`}
-                  maxLength={10}
-                  autoComplete="tel"
+              <div className={`flex-1 flex items-center border rounded-xl px-3 bg-white transition-colors ${
+                errors.whatsappNumber ? 'border-red-400' : 'border-slate-200 focus-within:border-blue-400'
+              }`}>
+                <Controller
+                  name="whatsappNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <PhoneInput
+                      {...field}
+                      defaultCountry="IN"
+                      international
+                      placeholder="WhatsApp number"
+                      onChange={(val) => { field.onChange(val); setPhoneVerified(false); }}
+                      className="w-full text-sm py-2.5"
+                    />
+                  )}
                 />
               </div>
               <button

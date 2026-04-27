@@ -43,25 +43,28 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const res = await authApi.login(data);
-      const { user, onboarding_complete, plan_selected } = res.data;
-
-      dispatch(setCredentials({ user, plan: user.plan, onboarding_complete, plan_selected }));
-      toast.success(`Welcome back, ${user.name?.split(' ')[0]}!`);
-
-      if (onboarding_complete) {
-        clearOnbCookie();               // existing user — mark done
-        router.push('/main/dashboard');
-      } else if (plan_selected) {
-        setOnbCookie('profile');        // chose plan but never finished profile
-        router.push('/main/profile-setup');
-      } else {
-        setOnbCookie('plan');           // brand-new user, pick a plan first
-        router.push('/pricing?onboarding=1');
-      }
+      // DEMO: bypass real auth — accept any valid-format credentials
+      await fetch('/api/auth/demo-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email }),
+      });
+      const firstName = data.email.split('@')[0];
+      const demoUser = {
+        id: 'demo-001',
+        name: firstName,
+        email: data.email,
+        first_name: firstName,
+        last_name: 'User',
+        avatar_url: null,
+        plan: 'premium',
+      };
+      dispatch(setCredentials({ user: demoUser, plan: 'premium', onboarding_complete: true, plan_selected: true }));
+      toast.success(`Welcome back, ${firstName}!`);
+      clearOnbCookie();
+      router.push('/main/dashboard');
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Invalid email or password.';
-      toast.error(msg);
+      toast.error('Something went wrong. Try again.');
     } finally {
       setLoading(false);
     }

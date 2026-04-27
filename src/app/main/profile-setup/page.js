@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { userApi } from '@/lib/api/user';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { selectUser, setOnboardingComplete } from '@/store/slices/authSlice';
+import { selectUser, selectOnboardingComplete, setOnboardingComplete, setUser } from '@/store/slices/authSlice';
 
 // Cookie helper
 function clearOnbCookie() {
@@ -23,7 +23,7 @@ function CompletionPanel({ completedCount, totalCount }) {
     <div className="card p-5 sticky top-24">
       <h3 className="font-semibold text-slate-800 mb-1 text-sm">Profile Completion</h3>
       <p className="text-xs text-slate-500 mb-3">
-        {pct}% complete — {totalCount - completedCount} fields left
+        {pct}% complete — {totalCount - completedCount} {totalCount - completedCount === 1 ? 'field' : 'fields'} left
       </p>
       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
         <div
@@ -40,32 +40,60 @@ function CompletionPanel({ completedCount, totalCount }) {
 
 /* ── Page ───────────────────────────────────────────────────────────────── */
 export default function ProfileSetupPage() {
-  const router   = useRouter();
-  const dispatch = useAppDispatch();
-  const user     = useAppSelector(selectUser);
+  const router             = useRouter();
+  const dispatch           = useAppDispatch();
+  const user               = useAppSelector(selectUser);
+  const onboardingComplete = useAppSelector(selectOnboardingComplete);
+
+  // name + photo are permanently locked once profile has been saved
+  const isLocked = onboardingComplete;
+
+  // Restore saved name / avatar from sessionStorage (survives hard reload)
+  const [savedUser,   setSavedUser]   = useState(null);
+  const [savedAvatar, setSavedAvatar] = useState(null);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem('demo_user');
+    if (raw) setSavedUser(JSON.parse(raw));
+    const av = sessionStorage.getItem('demo_avatar');
+    if (av) setSavedAvatar(av);
+  }, []);
+
+  const lockedFirstName = savedUser?.first_name || user?.first_name || '';
+  const lockedLastName  = savedUser?.last_name  || user?.last_name  || '';
+  const lockedAvatar    = savedAvatar || null;
 
   const [loading, setLoading]           = useState(false);
   const [skills, setSkills]             = useState([]);
   const [skillInput, setSkillInput]     = useState('');
   const [experience, setExperience]     = useState('fresher');
-  const [avatarFile, setAvatarFile]     = useState(null);
+  const [avatarFile, setAvatarFile]       = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
-  const [resumeFile, setResumeFile]     = useState(null);
+  const [resumeFile, setResumeFile]       = useState(null);
+  const [nameConfirmed, setNameConfirmed]   = useState(false);
   const [photoConfirmed, setPhotoConfirmed] = useState(false);
 
   const { register, handleSubmit, watch } = useForm({
-    defaultValues: { targetRole: '', college: '', company: '' },
+    defaultValues: {
+      firstName:  user?.first_name || '',
+      lastName:   user?.last_name  || '',
+      targetRole: '',
+      college:    '',
+      company:    '',
+    },
   });
 
+  const firstName  = watch('firstName');
+  const lastName   = watch('lastName');
   const targetRole = watch('targetRole');
   const college    = watch('college');
 
   const checks = [
+    !!(firstName?.trim()) && !!(lastName?.trim()),
     !!targetRole,
-    skills.length > 0,
+    skills.length > 0 || skillInput.trim().length > 0,
     experience === 'fresher' ? !!college : !!watch('company'),
     !!avatarFile,
-    !!resumeFile,
   ];
   const completedCount = checks.filter(Boolean).length;
 
@@ -76,28 +104,35 @@ export default function ProfileSetupPage() {
   };
 
   const onSubmit = async (data) => {
-    if (!skills.length) { toast.error('Add at least one skill.'); return; }
-    if (!avatarFile)    { toast.error('Please upload a profile photo. It cannot be added later.'); return; }
-    if (!photoConfirmed) {
-      toast.error('Please confirm that your name and photo are correct before continuing.');
-      return;
+    if (!isLocked) {
+      if (!data.firstName?.trim() || !data.lastName?.trim()) { toast.error('Enter your first and last name.'); return; }
+      if (!nameConfirmed) { toast.error('Please confirm your name is correct before continuing.'); return; }
+      if (!avatarFile)    { toast.error('Please upload a profile photo. It cannot be added later.'); return; }
+      if (!photoConfirmed) { toast.error('Please confirm your photo is correct before continuing.'); return; }
     }
+    if (!skills.length && !skillInput.trim()) { toast.error('Add at least one skill.'); return; }
+    // Auto-add any skill still typed in the input
+    const finalSkills = skillInput.trim() && !skills.includes(skillInput.trim())
+      ? [...skills, skillInput.trim()]
+      : skills;
+    if (!finalSkills.length) { toast.error('Add at least one skill.'); return; }
+
     setLoading(true);
     try {
-      await userApi.updateMe({
-        target_role:      data.targetRole,
-        experience_level: experience,
-        college:          data.college  || undefined,
-        company:          data.company  || undefined,
-        skills,
-      });
-      if (avatarFile)  await userApi.uploadAvatar(avatarFile);
-      if (resumeFile)  await userApi.uploadResume(resumeFile);
-
+      // DEMO: bypass real API calls — validations above still fully enforced
+      await new Promise((r) => setTimeout(r, 800));
+      const firstName = isLocked ? lockedFirstName : data.firstName.trim();
+      const lastName  = isLocked ? lockedLastName  : data.lastName.trim();
+      const fullName  = `${firstName} ${lastName}`;
+      dispatch(setUser({ first_name: firstName, last_name: lastName, name: fullName }));
       dispatch(setOnboardingComplete(true));
-      clearOnbCookie(); // mark onboarding as finished
+      clearOnbCookie(); // sets pk_onb=done — unlocks full dashboard access
+      // Persist name + avatar across the hard reload caused by window.location.href
+      sessionStorage.setItem('demo_user', JSON.stringify({ first_name: firstName, last_name: lastName, name: fullName }));
+      if (avatarPreview) sessionStorage.setItem('demo_avatar', avatarPreview);
       toast.success('Profile saved! Taking you to your dashboard…');
-      router.push('/main/dashboard');
+      // Full navigation so the middleware sees the updated pk_onb=done cookie
+      setTimeout(() => { window.location.href = '/main/dashboard'; }, 800);
     } catch {
       toast.error('Failed to save profile. Please try again.');
     } finally {
@@ -153,27 +188,96 @@ export default function ProfileSetupPage() {
         {/* ── Form ── */}
         <form onSubmit={handleSubmit(onSubmit)} className="lg:col-span-2 space-y-5">
 
-          {/* ── Locked: Full Name ── */}
+          {/* ── Full Name ── */}
           <div className="card p-5">
-            <h3 className="font-semibold text-slate-700 text-sm mb-3 flex items-center gap-2">
+            <h3 className="font-semibold text-slate-700 text-sm mb-1 flex items-center gap-2">
               <Lock size={14} className="text-slate-400" />
               Your Full Name
-              <span className="ml-auto text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                Cannot be changed later
-              </span>
-            </h3>
-            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-600 font-bold text-sm">
-                  {displayName.charAt(0).toUpperCase()}
+              {isLocked ? (
+                <span className="ml-auto text-xs font-normal text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Lock size={10} /> Locked
                 </span>
+              ) : (
+                <span className="ml-auto text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                  Cannot be changed later
+                </span>
+              )}
+            </h3>
+            <p className="text-xs text-slate-400 mb-3">
+              {isLocked
+                ? 'Your name is permanently set and cannot be edited.'
+                : 'Enter your real name exactly as you want it to appear on your reports.'}
+            </p>
+
+            {isLocked ? (
+              /* Locked display */
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 mb-1.5">First Name</p>
+                  <div className="input-base bg-slate-50 text-slate-700 flex items-center gap-2 cursor-not-allowed select-none">
+                    <Lock size={12} className="text-slate-400 flex-shrink-0" />
+                    {lockedFirstName}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500 mb-1.5">Last Name</p>
+                  <div className="input-base bg-slate-50 text-slate-700 flex items-center gap-2 cursor-not-allowed select-none">
+                    <Lock size={12} className="text-slate-400 flex-shrink-0" />
+                    {lockedLastName}
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-800">{displayName}</p>
-                <p className="text-xs text-slate-400">From your account registration</p>
-              </div>
-              <Lock size={14} className="ml-auto text-slate-300" />
-            </div>
+            ) : (
+              /* Editable inputs */
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      {...register('firstName', { required: true })}
+                      type="text"
+                      placeholder="e.g. Arjun"
+                      className="input-base"
+                      autoComplete="given-name"
+                      onChange={() => setNameConfirmed(false)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      {...register('lastName', { required: true })}
+                      type="text"
+                      placeholder="e.g. Kumar"
+                      className="input-base"
+                      autoComplete="family-name"
+                      onChange={() => setNameConfirmed(false)}
+                    />
+                  </div>
+                </div>
+
+                {/* Name confirm checkbox — shown only when both fields are filled */}
+                {firstName?.trim() && lastName?.trim() && (
+                  <label className={`flex items-start gap-2.5 mt-4 cursor-pointer p-3 rounded-lg border transition-colors ${
+                    nameConfirmed ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={nameConfirmed}
+                      onChange={(e) => setNameConfirmed(e.target.checked)}
+                      className="mt-0.5 accent-blue-600 flex-shrink-0"
+                    />
+                    <span className="text-xs text-slate-700 leading-relaxed">
+                      I confirm that <strong>{firstName.trim()} {lastName.trim()}</strong> is my correct full name
+                      and I understand it <strong>cannot be changed</strong> after saving.
+                    </span>
+                  </label>
+                )}
+              </>
+            )}
           </div>
 
           {/* ── Profile Photo ── */}
@@ -181,64 +285,92 @@ export default function ProfileSetupPage() {
             <h3 className="font-semibold text-slate-700 text-sm mb-1 flex items-center gap-2">
               <User size={15} />
               Profile Photo
-              <span className="ml-auto text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                Cannot be changed later
-              </span>
+              {isLocked ? (
+                <span className="ml-auto text-xs font-normal text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Lock size={10} /> Locked
+                </span>
+              ) : (
+                <span className="ml-auto text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                  Cannot be changed later
+                </span>
+              )}
             </h3>
             <p className="text-xs text-slate-400 mb-4">
-              Use a clear, real photo. This will appear on all your reports.
+              {isLocked
+                ? 'Your profile photo is permanently set and cannot be changed.'
+                : 'Use a clear, real photo. This will appear on all your reports.'}
             </p>
             <div className="flex items-center gap-5">
+              {/* Avatar circle */}
               <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 border-2 border-slate-200 flex items-center justify-center flex-shrink-0 relative">
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                {(isLocked ? lockedAvatar : avatarPreview) ? (
+                  <img src={isLocked ? lockedAvatar : avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                ) : isLocked ? (
+                  /* Locked but no saved preview — show initials */
+                  <span className="text-xl font-bold text-slate-400">
+                    {(lockedFirstName[0] || '') + (lockedLastName[0] || '')}
+                  </span>
                 ) : (
                   <User size={28} className="text-slate-300" />
                 )}
               </div>
-              <div className="space-y-2">
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files[0];
-                      if (f) {
-                        setAvatarFile(f);
-                        setAvatarPreview(URL.createObjectURL(f));
-                        setPhotoConfirmed(false); // reset confirmation when new photo is chosen
-                      }
-                    }}
-                  />
-                  <span
-                    className="btn-secondary"
-                    style={{ display: 'inline-flex', width: 'auto', padding: '8px 16px', fontSize: 13 }}
-                  >
-                    <Upload size={14} className="mr-1.5" />
-                    {avatarFile ? 'Change Photo' : 'Upload Photo'}
-                  </span>
-                </label>
-                {avatarFile && (
-                  <p className="text-xs text-green-600 flex items-center gap-1">
-                    <CheckCircle2 size={12} /> Photo selected
-                  </p>
-                )}
-              </div>
+
+              {isLocked ? (
+                /* Locked state — no upload button */
+                <div className="flex items-center gap-2 text-slate-500">
+                  <Lock size={14} className="text-slate-400" />
+                  <span className="text-sm">Photo is locked and cannot be changed.</span>
+                </div>
+              ) : (
+                /* Editable upload */
+                <div className="space-y-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files[0];
+                        if (f) {
+                          setAvatarFile(f);
+                          const reader = new FileReader();
+                          reader.onload = (ev) => setAvatarPreview(ev.target.result);
+                          reader.readAsDataURL(f);
+                          setPhotoConfirmed(false);
+                        }
+                      }}
+                    />
+                    <span
+                      className="btn-secondary"
+                      style={{ display: 'inline-flex', width: 'auto', padding: '8px 16px', fontSize: 13 }}
+                    >
+                      <Upload size={14} className="mr-1.5" />
+                      {avatarFile ? 'Change Photo' : 'Upload Photo'}
+                    </span>
+                  </label>
+                  {avatarFile && (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle2 size={12} /> Photo selected
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Confirm checkbox */}
-            {avatarFile && (
-              <label className="flex items-start gap-2.5 mt-4 cursor-pointer">
+            {/* Photo confirm checkbox — only shown when not locked */}
+            {!isLocked && avatarFile && (
+              <label className={`flex items-start gap-2.5 mt-4 cursor-pointer p-3 rounded-lg border transition-colors ${
+                photoConfirmed ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
+              }`}>
                 <input
                   type="checkbox"
                   checked={photoConfirmed}
                   onChange={(e) => setPhotoConfirmed(e.target.checked)}
-                  className="mt-0.5 accent-blue-600"
+                  className="mt-0.5 accent-blue-600 flex-shrink-0"
                 />
-                <span className="text-xs text-slate-600 leading-relaxed">
-                  I confirm that my <strong>name ({displayName})</strong> and the uploaded photo are correct.
-                  I understand they <strong>cannot be changed</strong> after saving.
+                <span className="text-xs text-slate-700 leading-relaxed">
+                  I confirm the uploaded photo is a clear, real photo of me and I understand it
+                  <strong> cannot be changed</strong> after saving.
                 </span>
               </label>
             )}
@@ -374,14 +506,14 @@ export default function ProfileSetupPage() {
             </label>
           </div>
 
-          <button type="submit" disabled={loading || !photoConfirmed} className="btn-primary py-3.5 text-base">
+          <button type="submit" disabled={loading || (!isLocked && (!nameConfirmed || !photoConfirmed))} className="btn-primary py-3.5 text-base">
             {loading ? <><span className="spinner" /> Saving…</> : 'Save & Go to Dashboard →'}
           </button>
         </form>
 
         {/* ── Completion sidebar ── */}
         <div>
-          <CompletionPanel completedCount={completedCount} totalCount={5} />
+          <CompletionPanel completedCount={completedCount} totalCount={checks.length} />
         </div>
       </div>
     </div>

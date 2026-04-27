@@ -147,6 +147,21 @@ a { color: inherit; text-decoration: none; }
   z-index: 40;
 }
 
+/* ── react-phone-number-input integration ── */
+.PhoneInput { display: flex; align-items: center; gap: 8px; width: 100%; }
+.PhoneInputCountry { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.PhoneInputCountrySelect {
+  border: none; outline: none; background: transparent;
+  font-size: 13px; color: #475569; cursor: pointer; padding: 2px 0;
+}
+.PhoneInputCountryIcon { width: 20px; height: 14px; border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+.PhoneInputCountryIcon--border { box-shadow: none; }
+.PhoneInputInput {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-size: 14px; color: #0f172a; padding: 0;
+}
+.PhoneInputInput::placeholder { color: #94a3b8; }
+
 /* Plan badge colors */
 .plan-free { background: #f1f5f9; color: #475569; }
 .plan-standard { background: #dbeafe; color: #1d4ed8; }

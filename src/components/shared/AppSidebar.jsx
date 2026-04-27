@@ -29,10 +29,10 @@ const NAV_ITEMS = [
 
 // ── User pop-up menu items ─────────────────────────────────────────────────
 const USER_MENU = [
-  { href: '/pricing',            icon: Sparkles,    label: 'Upgrade Plan',  accent: true },
+  { href: '/main/upgrade',       icon: Sparkles,    label: 'Upgrade Plan',  accent: true },
   { href: '/main/profile-setup', icon: User,        label: 'Profile' },
   { href: '/main/settings',      icon: Settings,    label: 'Settings' },
-  { href: '/help',               icon: HelpCircle,  label: 'Help' },
+  { href: '/main/help',          icon: HelpCircle,  label: 'Help' },
 ];
 
 export default function AppSidebar() {
@@ -128,7 +128,7 @@ export default function AppSidebar() {
       </nav>
 
       {/* ── User section (bottom) ── */}
-      <div className="border-t border-slate-800 px-3 py-3" ref={menuRef}>
+      <div className="relative border-t border-slate-800 px-3 py-3" ref={menuRef}>
 
         {/* Pop-up menu — rendered above the trigger */}
         {menuOpen && (

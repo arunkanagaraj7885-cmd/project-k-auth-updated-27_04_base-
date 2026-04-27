@@ -19,6 +19,7 @@ const PAGE_TITLES = {
   '/main/reports':         'My Reports',
   '/main/profile-setup':   'My Profile',
   '/main/jobs':            'Job Board',
+  '/main/upgrade':         'Upgrade Plan',
   '/pricing':              'Choose a Plan',
 };
 
@@ -52,7 +53,6 @@ export default function MainLayout({ children }) {
           plan_selected:       data.plan_selected ?? false,
         }));
 
-        // Route new users through onboarding if they land on a protected page
         if (!data.onboarding_complete) {
           if (!data.plan_selected && !pathname.startsWith('/main/profile-setup')) {
             setOnbCookie('plan');
@@ -69,7 +69,54 @@ export default function MainLayout({ children }) {
           setOnbCookie('done');
         }
       } catch {
-        // token invalid — middleware will redirect, just ignore
+        // DEMO: backend unavailable — rehydrate Redux from the pk_onb cookie so
+        // we never override an in-progress onboarding flow with a "done" session.
+        if (!isAuthed) {
+          const onbStep = document.cookie
+            .split('; ')
+            .find((c) => c.startsWith('pk_onb='))
+            ?.split('=')[1];
+
+          if (onbStep === 'plan') {
+            // New user who hasn't picked a plan yet
+            dispatch(setCredentials({
+              user: { id: 'demo-001', name: 'Demo User', email: 'demo@demo.com', first_name: 'Demo', last_name: 'User', avatar_url: null, plan: 'free' },
+              plan: 'free',
+              onboarding_complete: false,
+              plan_selected: false,
+            }));
+            // Middleware already enforces the redirect; don't touch the cookie
+          } else if (onbStep === 'profile') {
+            // New user who selected a plan but hasn't finished profile setup
+            dispatch(setCredentials({
+              user: { id: 'demo-001', name: 'Demo User', email: 'demo@demo.com', first_name: 'Demo', last_name: 'User', avatar_url: null, plan: 'premium' },
+              plan: 'premium',
+              onboarding_complete: false,
+              plan_selected: true,
+            }));
+            // Middleware already enforces the redirect; don't touch the cookie
+          } else {
+            // Returning user with no active onboarding — give full demo access.
+            // Prefer the name saved by profile-setup (survives the hard reload).
+            const savedRaw = sessionStorage.getItem('demo_user');
+            const saved = savedRaw ? JSON.parse(savedRaw) : null;
+            dispatch(setCredentials({
+              user: {
+                id: 'demo-001',
+                name:       saved?.name       || 'Demo User',
+                email:      'demo@demo.com',
+                first_name: saved?.first_name || 'Demo',
+                last_name:  saved?.last_name  || 'User',
+                avatar_url: null,
+                plan: 'premium',
+              },
+              plan: 'premium',
+              onboarding_complete: true,
+              plan_selected: true,
+            }));
+            setOnbCookie('done');
+          }
+        }
       }
     };
     rehydrate();

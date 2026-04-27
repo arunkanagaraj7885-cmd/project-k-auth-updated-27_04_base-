@@ -38,6 +38,9 @@ const authSlice = createSlice({
     setPlanSelected(state, action) {
       state.planSelected = action.payload;
     },
+    setUser(state, action) {
+      state.user = { ...state.user, ...action.payload };
+    },
   },
 });
 
@@ -47,6 +50,7 @@ export const {
   updatePlan,
   setOnboardingComplete,
   setPlanSelected,
+  setUser,
 } = authSlice.actions;
 
 export default authSlice.reducer;
