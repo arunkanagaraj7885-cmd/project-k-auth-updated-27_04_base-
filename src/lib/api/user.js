@@ -1,23 +1,30 @@
 import api from '@/lib/axios';
 
 export const userApi = {
-  getMe: () => api.get('/users/me'),
-  updateMe: (data) => api.put('/users/me', data),
+  // GET /auth/me → returns UserOut directly
+  getMe: () => api.get('/auth/me'),
+
+  // PATCH /profile/ → updates profile + user name fields
+  updateMe: (data) => api.patch('/profile/', data),
+
+  // POST /profile/photo — field name must be 'file'
   uploadAvatar: (file) => {
     const form = new FormData();
-    form.append('avatar', file);
-    return api.post('/users/me/avatar', form, {
+    form.append('file', file);
+    return api.post('/profile/photo', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
-  deleteAvatar: () => api.delete('/users/me/avatar'),
+
+  // POST /profile/resume — field name must be 'file'
   uploadResume: (file) => {
     const form = new FormData();
-    form.append('resume', file);
-    return api.post('/users/me/resume', form, {
+    form.append('file', file);
+    return api.post('/profile/resume', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
-  getResumeStatus: () => api.get('/users/me/resume/status'),
-  deleteResume: () => api.delete('/users/me/resume'),
+
+  // GET /profile/ → returns { user, profile }
+  getProfile: () => api.get('/profile/'),
 };

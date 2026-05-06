@@ -4,7 +4,9 @@ import { X } from 'lucide-react';
 import { authApi } from '@/lib/api/auth';
 import toast from 'react-hot-toast';
 
-export default function OTPModal({ open, phone, onSuccess, onClose }) {
+// verifyFn: optional override — receives (phone, otpCode) and must return a Promise.
+// If not provided, falls back to authApi.verifyOtp(phone, code, 'login').
+export default function OTPModal({ open, phone, onSuccess, onClose, verifyFn }) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const refs = useRef([]);
@@ -28,13 +30,26 @@ export default function OTPModal({ open, phone, onSuccess, onClose }) {
     if (code.length !== 6) { toast.error('Enter the 6-digit OTP'); return; }
     setLoading(true);
     try {
-      await authApi.verifyOtp(phone, code);
+      if (verifyFn) {
+        await verifyFn(phone, code);
+      } else {
+        await authApi.verifyOtp(phone, code, 'login');
+      }
       toast.success('Phone verified!');
       onSuccess();
     } catch {
       toast.error('Invalid OTP. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    try {
+      await authApi.sendOtp(phone);
+      toast.success('OTP resent!');
+    } catch {
+      toast.error('Failed to resend OTP.');
     }
   };
 
@@ -45,7 +60,7 @@ export default function OTPModal({ open, phone, onSuccess, onClose }) {
           <div>
             <h3 className="font-semibold text-slate-800 text-lg">Verify your number</h3>
             <p className="text-sm text-slate-500 mt-1">
-              Enter the 6-digit OTP sent to <span className="font-medium text-slate-700">+91 {phone}</span>
+              Enter the 6-digit OTP sent to <span className="font-medium text-slate-700">{phone}</span>
             </p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 mt-1">
@@ -77,10 +92,7 @@ export default function OTPModal({ open, phone, onSuccess, onClose }) {
 
         <p className="text-center text-xs text-slate-500 mt-4">
           Didn&apos;t receive it?{' '}
-          <button
-            className="text-blue-600 font-medium hover:underline"
-            onClick={() => authApi.sendOtp(phone)}
-          >
+          <button className="text-blue-600 font-medium hover:underline" onClick={handleResend}>
             Resend
           </button>
         </p>

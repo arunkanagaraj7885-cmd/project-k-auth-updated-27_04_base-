@@ -123,7 +123,7 @@ export default function MainLayout({ children }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
       <AppSidebar />
 
       <div
@@ -132,7 +132,7 @@ export default function MainLayout({ children }) {
       >
         <AppHeader title={title} />
 
-        <main className="pt-16 min-h-screen">
+        <main className="pt-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
           <div className="p-6 max-w-7xl mx-auto">
             {children}
           </div>

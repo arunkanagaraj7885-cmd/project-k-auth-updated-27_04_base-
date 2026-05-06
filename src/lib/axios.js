@@ -20,7 +20,7 @@ api.interceptors.response.use(
       }
       refreshing = true;
       try {
-        await api.post('/auth/refresh');
+        await api.post('/auth/refresh-token');
       } catch {
         if (typeof window !== 'undefined') {
           window.location.href = '/auth/login';

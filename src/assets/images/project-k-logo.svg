@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" width="100%" height="100%">
+  <defs>
+    <style>
+      .text { 
+        font-family: Georgia, 'Times New Roman', serif; 
+        font-size: 52px; 
+        font-weight: bold; 
+        fill: #364156; 
+        letter-spacing: 3px; 
+      }
+      .blue { fill: #2087b8; }
+      .dark { fill: #364156; }
+    </style>
+  </defs>
+
+  <!-- Centered Text -->
+  <text x="300" y="118" text-anchor="middle" class="text">PROJECT K</text>
+
+  <!-- Orbital Arcs -->
+  <g transform="translate(300, 100)">
+    <!-- Top Arcs -->
+    <path class="blue" d="M -130,-45 L -130,-30 C -80,-60 40,-55 120,-15 C 50,-70 -70,-70 -130,-45 Z" />
+    <path class="dark" d="M -30,-48 C 30,-52 80,-40 115,-18 C 70,-45 20,-45 -30,-48 Z" />
+
+    <!-- Bottom Arcs (Symmetrically rotated 180 degrees) -->
+    <g transform="rotate(180)">
+      <path class="blue" d="M -130,-45 L -130,-30 C -80,-60 40,-55 120,-15 C 50,-70 -70,-70 -130,-45 Z" />
+      <path class="dark" d="M -30,-48 C 30,-52 80,-40 115,-18 C 70,-45 20,-45 -30,-48 Z" />
+    </g>
+  </g>
+</svg>
