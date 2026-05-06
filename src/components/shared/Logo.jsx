@@ -4,9 +4,9 @@ import projectKLogo from '@/assets/images/project-k-logo.svg';
 
 export default function Logo({ size = 'md' }) {
   const sizes = {
-    sm: { width: 120, height: 38 },
-    md: { width: 154, height: 48 },
-    lg: { width: 178, height: 56 },
+    sm: { width: 150, height: 50 },
+    md: { width: 190, height: 70 },
+    lg: { width: 220, height: 69 },
   };
   const s = sizes[size] || sizes.md;
 
