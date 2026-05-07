@@ -3,52 +3,62 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import {
-  User, Briefcase, BookOpen, Upload, CheckCircle2, X,
-  AlertTriangle, Lock,
-} from 'lucide-react';
-import { userApi } from '@/lib/api/user';
+import { User, Upload, CheckCircle2, AlertTriangle, Lock } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { selectUser, selectOnboardingComplete, setOnboardingComplete, setUser } from '@/store/slices/authSlice';
+import {
+  selectUser,
+  selectOnboardingComplete,
+  setOnboardingComplete,
+  setUser,
+} from '@/store/slices/authSlice';
 
-// Cookie helper
 function clearOnbCookie() {
   document.cookie = 'pk_onb=done; path=/; max-age=86400; SameSite=Lax';
 }
 
-/* ── Completion side panel ──────────────────────────────────────────────── */
-function CompletionPanel({ completedCount, totalCount }) {
-  const pct = Math.round((completedCount / totalCount) * 100);
+const COMPLETION_HINTS = [
+  'Profile photo is mandatory to continue',
+  'Interview language is set to English by default',
+  'You can add address, LinkedIn, and more details later',
+  'Resume upload improves interview personalization',
+];
+
+function CompletionPanel({ pct }) {
   return (
     <div className="card p-5 sticky top-24">
-      <h3 className="font-semibold text-slate-800 mb-1 text-sm">Profile Completion</h3>
-      <p className="text-xs text-slate-500 mb-3">
-        {pct}% complete — {totalCount - completedCount} {totalCount - completedCount === 1 ? 'field' : 'fields'} left
-      </p>
-      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+      <h3 className="font-semibold text-slate-800 mb-4">Profile completion</h3>
+      <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+        <span>Current progress</span>
+        <span className="font-semibold text-slate-700">{pct}%</span>
+      </div>
+      <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-5">
         <div
-          className="h-full bg-blue-600 rounded-full transition-all duration-500"
+          className="h-full bg-blue-500 rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <p className="text-xs text-slate-400 mt-3 leading-relaxed">
-        A complete profile helps the AI generate more relevant interview questions.
-      </p>
+      <ul className="space-y-3">
+        {COMPLETION_HINTS.map((hint) => (
+          <li key={hint} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 flex-shrink-0" />
+            {hint}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-/* ── Page ───────────────────────────────────────────────────────────────── */
 export default function ProfileSetupPage() {
   const router             = useRouter();
   const dispatch           = useAppDispatch();
   const user               = useAppSelector(selectUser);
   const onboardingComplete = useAppSelector(selectOnboardingComplete);
 
-  // name + photo are permanently locked once profile has been saved
+  // Name + photo are permanently locked once the profile has been submitted
   const isLocked = onboardingComplete;
 
-  // Restore saved name / avatar from sessionStorage (survives hard reload)
+  // Restore persisted name / avatar from sessionStorage (survives hard reload)
   const [savedUser,   setSavedUser]   = useState(null);
   const [savedAvatar, setSavedAvatar] = useState(null);
 
@@ -63,75 +73,74 @@ export default function ProfileSetupPage() {
   const lockedLastName  = savedUser?.last_name  || user?.last_name  || '';
   const lockedAvatar    = savedAvatar || null;
 
-  const [loading, setLoading]           = useState(false);
-  const [skills, setSkills]             = useState([]);
-  const [skillInput, setSkillInput]     = useState('');
-  const [experience, setExperience]     = useState('fresher');
+  const [loading, setLoading]             = useState(false);
   const [avatarFile, setAvatarFile]       = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [resumeFile, setResumeFile]       = useState(null);
-  const [nameConfirmed, setNameConfirmed]   = useState(false);
-  const [photoConfirmed, setPhotoConfirmed] = useState(false);
+  const [experience, setExperience]       = useState('fresher');
 
   const { register, handleSubmit, watch } = useForm({
     defaultValues: {
-      firstName:  user?.first_name || '',
-      lastName:   user?.last_name  || '',
-      targetRole: '',
-      college:    '',
-      company:    '',
+      firstName:         !isLocked ? (user?.first_name || '') : '',
+      lastName:          !isLocked ? (user?.last_name  || '') : '',
+      targetRole:        '',
+      mainSkill:         '',
+      yearsOfExperience: '',
+      country:           '',
+      state:             '',
+      whatsappNumber:    '',
+      college:           '',
+      company:           '',
     },
   });
 
-  const firstName  = watch('firstName');
-  const lastName   = watch('lastName');
-  const targetRole = watch('targetRole');
-  const college    = watch('college');
+  const w = watch();
 
-  const checks = [
-    !!(firstName?.trim()) && !!(lastName?.trim()),
-    !!targetRole,
-    skills.length > 0 || skillInput.trim().length > 0,
-    experience === 'fresher' ? !!college : !!watch('company'),
-    !!avatarFile,
+  const displayFirstName = isLocked ? lockedFirstName : (w.firstName || '');
+  const displayLastName  = isLocked ? lockedLastName  : (w.lastName  || '');
+  const displayName      = [displayFirstName, displayLastName].filter(Boolean).join(' ') || 'Your Name';
+  const displayAvatar    = isLocked ? lockedAvatar : avatarPreview;
+
+  // Progress
+  const tracked = [
+    isLocked ? !!lockedAvatar : !!avatarFile,
+    !!w.targetRole?.trim(),
+    !!w.mainSkill?.trim(),
+    !!w.country?.trim(),
+    !!w.state?.trim(),
+    !!w.whatsappNumber?.trim(),
+    experience === 'fresher' ? !!w.college?.trim() : !!w.company?.trim(),
+    !!resumeFile,
   ];
-  const completedCount = checks.filter(Boolean).length;
-
-  const addSkill = () => {
-    const s = skillInput.trim();
-    if (s && !skills.includes(s)) setSkills((prev) => [...prev, s]);
-    setSkillInput('');
-  };
+  const pct = Math.round((tracked.filter(Boolean).length / tracked.length) * 100);
 
   const onSubmit = async (data) => {
     if (!isLocked) {
-      if (!data.firstName?.trim() || !data.lastName?.trim()) { toast.error('Enter your first and last name.'); return; }
-      if (!nameConfirmed) { toast.error('Please confirm your name is correct before continuing.'); return; }
-      if (!avatarFile)    { toast.error('Please upload a profile photo. It cannot be added later.'); return; }
-      if (!photoConfirmed) { toast.error('Please confirm your photo is correct before continuing.'); return; }
+      if (!data.firstName?.trim() || !data.lastName?.trim()) {
+        toast.error('Enter your first and last name.'); return;
+      }
+      if (!avatarFile) {
+        toast.error('Please upload a profile photo to continue.'); return;
+      }
     }
-    if (!skills.length && !skillInput.trim()) { toast.error('Add at least one skill.'); return; }
-    // Auto-add any skill still typed in the input
-    const finalSkills = skillInput.trim() && !skills.includes(skillInput.trim())
-      ? [...skills, skillInput.trim()]
-      : skills;
-    if (!finalSkills.length) { toast.error('Add at least one skill.'); return; }
+    if (!data.targetRole?.trim()) { toast.error('Target role is required.'); return; }
+    if (!data.mainSkill?.trim())  { toast.error('Main skill is required.');  return; }
+    if (experience === 'fresher' && !data.college?.trim()) {
+      toast.error('College name is required.'); return;
+    }
 
     setLoading(true);
     try {
-      // DEMO: bypass real API calls — validations above still fully enforced
       await new Promise((r) => setTimeout(r, 800));
       const firstName = isLocked ? lockedFirstName : data.firstName.trim();
       const lastName  = isLocked ? lockedLastName  : data.lastName.trim();
       const fullName  = `${firstName} ${lastName}`;
       dispatch(setUser({ first_name: firstName, last_name: lastName, name: fullName }));
       dispatch(setOnboardingComplete(true));
-      clearOnbCookie(); // sets pk_onb=done — unlocks full dashboard access
-      // Persist name + avatar across the hard reload caused by window.location.href
+      clearOnbCookie();
       sessionStorage.setItem('demo_user', JSON.stringify({ first_name: firstName, last_name: lastName, name: fullName }));
       if (avatarPreview) sessionStorage.setItem('demo_avatar', avatarPreview);
       toast.success('Profile saved! Taking you to your dashboard…');
-      // Full navigation so the middleware sees the updated pk_onb=done cookie
       setTimeout(() => { window.location.href = '/main/dashboard'; }, 800);
     } catch {
       toast.error('Failed to save profile. Please try again.');
@@ -140,381 +149,328 @@ export default function ProfileSetupPage() {
     }
   };
 
-  // Derive display name
-  const displayName = user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Your Name';
-
   return (
     <div className="animate-fade-in">
-      {/* ── Step indicator ── */}
-      <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
-        <span className="flex items-center gap-1.5 text-slate-400">
-          <span className="w-5 h-5 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center">✓</span>
-          Account
-        </span>
-        <span className="text-slate-300">›</span>
-        <span className="flex items-center gap-1.5 text-slate-400">
-          <span className="w-5 h-5 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center">✓</span>
-          Plan
-        </span>
-        <span className="text-slate-300">›</span>
-        <span className="flex items-center gap-1.5 font-semibold text-slate-800">
-          <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">3</span>
-          Create Profile
-        </span>
-      </div>
-
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-slate-800">Step 3 — Set up your profile</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Help the AI personalise your interview experience.
+      {/* ── Page header ── */}
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Complete your quick profile setup</h1>
+          <p className="text-sm text-slate-500 mt-1 max-w-xl">
+            We kept this short so you can start faster. You can complete the rest of your profile later inside the application.
+          </p>
+        </div>
+        <p className="text-sm text-slate-500 flex-shrink-0 ml-6 mt-1">
+          Welcome, <span className="font-semibold text-slate-700">{lockedFirstName || user?.first_name || 'User'}</span>
         </p>
       </div>
 
-      {/* ── ⚠️ Permanent-info warning banner ── */}
-      <div className="mb-6 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 flex gap-3">
-        <AlertTriangle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-semibold text-amber-800">
-            Your name and profile photo are permanent
-          </p>
-          <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
-            Once you save your profile, <strong>your first name, last name, and profile photo cannot be changed</strong>.
-            Please make sure they are correct before continuing. These details appear on your interview reports.
-          </p>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ── Form ── */}
-        <form onSubmit={handleSubmit(onSubmit)} className="lg:col-span-2 space-y-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-          {/* ── Full Name ── */}
-          <div className="card p-5">
-            <h3 className="font-semibold text-slate-700 text-sm mb-1 flex items-center gap-2">
-              <Lock size={14} className="text-slate-400" />
-              Your Full Name
-              {isLocked ? (
-                <span className="ml-auto text-xs font-normal text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <Lock size={10} /> Locked
-                </span>
-              ) : (
-                <span className="ml-auto text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                  Cannot be changed later
-                </span>
-              )}
-            </h3>
-            <p className="text-xs text-slate-400 mb-3">
-              {isLocked
-                ? 'Your name is permanently set and cannot be edited.'
-                : 'Enter your real name exactly as you want it to appear on your reports.'}
+        {/* ── Form card ── */}
+        <form onSubmit={handleSubmit(onSubmit)} className="lg:col-span-2">
+          <div className="card p-6">
+
+            {/* Card header */}
+            <div className="flex items-start justify-between mb-1">
+              <h2 className="text-lg font-bold text-slate-800">
+                Let's personalize your interview experience
+              </h2>
+              <button type="button" className="text-blue-600 text-sm font-medium hover:underline flex-shrink-0 ml-4">
+                Quick Setup
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mb-5 leading-relaxed">
+              Your name details are already filled. Add only the essential information needed to generate more
+              relevant interview questions and reports.
             </p>
 
-            {isLocked ? (
-              /* Locked display */
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 mb-1.5">First Name</p>
-                  <div className="input-base bg-slate-50 text-slate-700 flex items-center gap-2 cursor-not-allowed select-none">
-                    <Lock size={12} className="text-slate-400 flex-shrink-0" />
-                    {lockedFirstName}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-500 mb-1.5">Last Name</p>
-                  <div className="input-base bg-slate-50 text-slate-700 flex items-center gap-2 cursor-not-allowed select-none">
-                    <Lock size={12} className="text-slate-400 flex-shrink-0" />
-                    {lockedLastName}
-                  </div>
-                </div>
+            {/* ── Profile photo row ── */}
+            <div className="flex items-center gap-4 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-slate-200 border-2 border-slate-300 flex items-center justify-center flex-shrink-0">
+                {displayAvatar ? (
+                  <img src={displayAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={26} className="text-slate-400" />
+                )}
               </div>
-            ) : (
-              /* Editable inputs */
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                      First Name <span className="text-red-500">*</span>
-                    </label>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-800">{displayName}</p>
+                {isLocked ? (
+                  <>
+                    <p className="text-xs text-slate-500 mt-0.5">Profile picture uploaded.</p>
+                    <p className="mt-1 inline-flex items-center gap-1 text-xs text-slate-400 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+                      <Lock size={10} className="flex-shrink-0" /> Locked · Contact support to update
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Profile picture is mandatory.
+                    </p>
+                    {avatarFile ? (
+                      <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                        <CheckCircle2 size={12} /> Photo selected
+                      </p>
+                    ) : (
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                        <AlertTriangle size={10} className="flex-shrink-0" /> Cannot be changed after submission
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Upload button — hidden when locked */}
+              {!isLocked && (
+                <label className="cursor-pointer flex-shrink-0">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files[0];
+                      if (f) {
+                        setAvatarFile(f);
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setAvatarPreview(ev.target.result);
+                        reader.readAsDataURL(f);
+                      }
+                    }}
+                  />
+                  <span
+                    className="btn-secondary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, width: 'auto', padding: '8px 18px', fontSize: 13 }}
+                  >
+                    <Upload size={13} />
+                    Upload
+                  </span>
+                </label>
+              )}
+            </div>
+
+            {/* ── Form fields ── */}
+            <div className="space-y-4">
+
+              {/* Row 1: First Name | Last Name */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                    First Name {!isLocked && <span className="text-red-500">*</span>}
+                  </label>
+                  {isLocked ? (
+                    <div className="input-base bg-slate-50 text-slate-600 flex items-center gap-2 cursor-not-allowed select-none">
+                      <Lock size={12} className="text-slate-400 flex-shrink-0" />
+                      {lockedFirstName}
+                    </div>
+                  ) : (
                     <input
                       {...register('firstName', { required: true })}
                       type="text"
                       placeholder="e.g. Arjun"
                       className="input-base"
                       autoComplete="given-name"
-                      onChange={() => setNameConfirmed(false)}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                      Last Name <span className="text-red-500">*</span>
-                    </label>
+                  )}
+                  {isLocked ? (
+                    <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-slate-400 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+                      <Lock size={10} className="flex-shrink-0" /> Locked · Contact support to update
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                      <AlertTriangle size={10} className="flex-shrink-0" /> Cannot be changed after submission
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                    Last Name / Initial {!isLocked && <span className="text-red-500">*</span>}
+                  </label>
+                  {isLocked ? (
+                    <div className="input-base bg-slate-50 text-slate-600 flex items-center gap-2 cursor-not-allowed select-none">
+                      <Lock size={12} className="text-slate-400 flex-shrink-0" />
+                      {lockedLastName}
+                    </div>
+                  ) : (
                     <input
                       {...register('lastName', { required: true })}
                       type="text"
                       placeholder="e.g. Kumar"
                       className="input-base"
                       autoComplete="family-name"
-                      onChange={() => setNameConfirmed(false)}
                     />
-                  </div>
-                </div>
-
-                {/* Name confirm checkbox — shown only when both fields are filled */}
-                {firstName?.trim() && lastName?.trim() && (
-                  <label className={`flex items-start gap-2.5 mt-4 cursor-pointer p-3 rounded-lg border transition-colors ${
-                    nameConfirmed ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
-                  }`}>
-                    <input
-                      type="checkbox"
-                      checked={nameConfirmed}
-                      onChange={(e) => setNameConfirmed(e.target.checked)}
-                      className="mt-0.5 accent-blue-600 flex-shrink-0"
-                    />
-                    <span className="text-xs text-slate-700 leading-relaxed">
-                      I confirm that <strong>{firstName.trim()} {lastName.trim()}</strong> is my correct full name
-                      and I understand it <strong>cannot be changed</strong> after saving.
-                    </span>
-                  </label>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* ── Profile Photo ── */}
-          <div className="card p-5">
-            <h3 className="font-semibold text-slate-700 text-sm mb-1 flex items-center gap-2">
-              <User size={15} />
-              Profile Photo
-              {isLocked ? (
-                <span className="ml-auto text-xs font-normal text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <Lock size={10} /> Locked
-                </span>
-              ) : (
-                <span className="ml-auto text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                  Cannot be changed later
-                </span>
-              )}
-            </h3>
-            <p className="text-xs text-slate-400 mb-4">
-              {isLocked
-                ? 'Your profile photo is permanently set and cannot be changed.'
-                : 'Use a clear, real photo. This will appear on all your reports.'}
-            </p>
-            <div className="flex items-center gap-5">
-              {/* Avatar circle */}
-              <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 border-2 border-slate-200 flex items-center justify-center flex-shrink-0 relative">
-                {(isLocked ? lockedAvatar : avatarPreview) ? (
-                  <img src={isLocked ? lockedAvatar : avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
-                ) : isLocked ? (
-                  /* Locked but no saved preview — show initials */
-                  <span className="text-xl font-bold text-slate-400">
-                    {(lockedFirstName[0] || '') + (lockedLastName[0] || '')}
-                  </span>
-                ) : (
-                  <User size={28} className="text-slate-300" />
-                )}
-              </div>
-
-              {isLocked ? (
-                /* Locked state — no upload button */
-                <div className="flex items-center gap-2 text-slate-500">
-                  <Lock size={14} className="text-slate-400" />
-                  <span className="text-sm">Photo is locked and cannot be changed.</span>
-                </div>
-              ) : (
-                /* Editable upload */
-                <div className="space-y-2">
-                  <label className="cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files[0];
-                        if (f) {
-                          setAvatarFile(f);
-                          const reader = new FileReader();
-                          reader.onload = (ev) => setAvatarPreview(ev.target.result);
-                          reader.readAsDataURL(f);
-                          setPhotoConfirmed(false);
-                        }
-                      }}
-                    />
-                    <span
-                      className="btn-secondary"
-                      style={{ display: 'inline-flex', width: 'auto', padding: '8px 16px', fontSize: 13 }}
-                    >
-                      <Upload size={14} className="mr-1.5" />
-                      {avatarFile ? 'Change Photo' : 'Upload Photo'}
-                    </span>
-                  </label>
-                  {avatarFile && (
-                    <p className="text-xs text-green-600 flex items-center gap-1">
-                      <CheckCircle2 size={12} /> Photo selected
+                  )}
+                  {isLocked ? (
+                    <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-slate-400 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+                      <Lock size={10} className="flex-shrink-0" /> Locked · Contact support to update
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                      <AlertTriangle size={10} className="flex-shrink-0" /> Cannot be changed after submission
                     </p>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Photo confirm checkbox — only shown when not locked */}
-            {!isLocked && avatarFile && (
-              <label className={`flex items-start gap-2.5 mt-4 cursor-pointer p-3 rounded-lg border transition-colors ${
-                photoConfirmed ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
-              }`}>
-                <input
-                  type="checkbox"
-                  checked={photoConfirmed}
-                  onChange={(e) => setPhotoConfirmed(e.target.checked)}
-                  className="mt-0.5 accent-blue-600 flex-shrink-0"
-                />
-                <span className="text-xs text-slate-700 leading-relaxed">
-                  I confirm the uploaded photo is a clear, real photo of me and I understand it
-                  <strong> cannot be changed</strong> after saving.
-                </span>
-              </label>
-            )}
-          </div>
+              {/* Row 2: Experience Level | Years of Experience */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                    Experience Level <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={experience}
+                    onChange={(e) => setExperience(e.target.value)}
+                    className="input-base"
+                  >
+                    <option value="fresher">Fresher</option>
+                    <option value="experienced">Experienced</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                    Years of Experience
+                  </label>
+                  <input
+                    {...register('yearsOfExperience')}
+                    type="text"
+                    placeholder={experience === 'fresher' ? 'Visible only if Experienced' : 'e.g. 3'}
+                    disabled={experience === 'fresher'}
+                    className={`input-base ${experience === 'fresher' ? 'bg-slate-50 text-slate-400 cursor-default' : ''}`}
+                  />
+                </div>
+              </div>
 
-          {/* ── Experience Level ── */}
-          <div className="card p-5">
-            <h3 className="font-semibold text-slate-700 text-sm mb-4 flex items-center gap-2">
-              <Briefcase size={15} /> Experience Level
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {['fresher', 'experienced'].map((exp) => (
-                <button
-                  key={exp}
-                  type="button"
-                  onClick={() => setExperience(exp)}
-                  className={`py-3 rounded-xl border-2 text-sm font-medium capitalize transition-all ${
-                    experience === exp
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-slate-200 text-slate-600 hover:border-blue-200'
-                  }`}
-                >
-                  {exp === 'fresher' ? '🎓 Fresher' : '💼 Experienced'}
-                </button>
-              ))}
-            </div>
-          </div>
+              {/* Row 3: Target Role | Main Skill */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                    Target Role <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...register('targetRole')}
+                    type="text"
+                    placeholder="Example: Software Developer"
+                    className="input-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                    Main Skill <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...register('mainSkill')}
+                    type="text"
+                    placeholder="Example: Java, Sales, Excel"
+                    className="input-base"
+                  />
+                </div>
+              </div>
 
-          {/* ── Background ── */}
-          <div className="card p-5 space-y-4">
-            <h3 className="font-semibold text-slate-700 text-sm flex items-center gap-2">
-              <BookOpen size={15} /> Background
-            </h3>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                Target Role <span className="text-red-500">*</span>
-              </label>
-              <input
-                {...register('targetRole', { required: true })}
-                placeholder="e.g. Software Engineer"
-                className="input-base"
-              />
-            </div>
-            {experience === 'fresher' ? (
+              {/* Row 4: Country | State */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">Country</label>
+                  <input
+                    {...register('country')}
+                    type="text"
+                    placeholder="e.g. India"
+                    className="input-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">State</label>
+                  <input
+                    {...register('state')}
+                    type="text"
+                    placeholder="e.g. Tamil Nadu"
+                    className="input-base"
+                  />
+                </div>
+              </div>
+
+              {/* Row 5: WhatsApp Number */}
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                  College / University <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">WhatsApp Number</label>
                 <input
-                  {...register('college')}
-                  placeholder="e.g. IIT Madras, VIT Vellore"
+                  {...register('whatsappNumber')}
+                  type="tel"
+                  placeholder="+91 98765 43210"
                   className="input-base"
                 />
               </div>
-            ) : (
+
+              {/* Row 6: College Name (fresher, required) or Current Company (experienced, optional) */}
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                  Current Company
+                  {experience === 'fresher' ? (
+                    <>College Name <span className="text-red-500">*</span></>
+                  ) : (
+                    'Current Company'
+                  )}
                 </label>
-                <input
-                  {...register('company')}
-                  placeholder="e.g. Infosys, TCS"
-                  className="input-base"
-                />
+                {experience === 'fresher' ? (
+                  <input
+                    {...register('college')}
+                    type="text"
+                    placeholder="Enter your college name or university"
+                    className="input-base"
+                  />
+                ) : (
+                  <input
+                    {...register('company')}
+                    type="text"
+                    placeholder="Enter your current company"
+                    className="input-base"
+                  />
+                )}
               </div>
-            )}
-          </div>
 
-          {/* ── Skills ── */}
-          <div className="card p-5">
-            <h3 className="font-semibold text-slate-700 text-sm mb-4">
-              Key Skills <span className="text-red-500">*</span>
-            </h3>
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={skillInput}
-                onChange={(e) => setSkillInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSkill(); } }}
-                placeholder="Add a skill (e.g. Python, React)"
-                className="input-base flex-1"
-              />
-              <button
-                type="button"
-                onClick={addSkill}
-                className="btn-secondary"
-                style={{ width: 'auto', padding: '10px 16px', fontSize: 13 }}
-              >
-                Add
+              {/* Row 7: Resume upload */}
+              <div className="rounded-xl border border-dashed border-slate-200 p-5">
+                <h4 className="font-semibold text-slate-700 text-sm mb-1">Upload your latest resume</h4>
+                <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                  You can upload it now or update it anytime later. Adding your resume helps Project K create
+                  better interview questions and stronger reports.
+                </p>
+                <div className="flex items-center gap-3">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      className="hidden"
+                      onChange={(e) => setResumeFile(e.target.files[0] || null)}
+                    />
+                    <span
+                      className="btn-secondary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, width: 'auto', padding: '8px 18px', fontSize: 13 }}
+                    >
+                      <Upload size={13} />
+                      Upload Resume
+                    </span>
+                  </label>
+                  {resumeFile ? (
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle2 size={12} /> {resumeFile.name}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">PDF or DOC format</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Submit ── */}
+            <div className="flex justify-end mt-6">
+              <button type="submit" disabled={loading} className="btn-primary px-10">
+                {loading ? <><span className="spinner" /> Saving…</> : 'Submit'}
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {skills.map((s) => (
-                <span
-                  key={s}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-xs font-medium"
-                >
-                  {s}
-                  <button type="button" onClick={() => setSkills((prev) => prev.filter((x) => x !== s))}>
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
-              {skills.length === 0 && <p className="text-xs text-slate-400">No skills added yet.</p>}
-            </div>
           </div>
-
-          {/* ── Resume ── */}
-          <div className="card p-5">
-            <h3 className="font-semibold text-slate-700 text-sm mb-4 flex items-center gap-2">
-              <Upload size={15} /> Resume
-              <span className="ml-auto text-xs font-normal text-slate-400">(optional but recommended)</span>
-            </h3>
-            <label className="cursor-pointer block border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-blue-300 transition-colors">
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                className="hidden"
-                onChange={(e) => setResumeFile(e.target.files[0])}
-              />
-              {resumeFile ? (
-                <div className="flex items-center justify-center gap-2 text-green-600">
-                  <CheckCircle2 size={18} />
-                  <span className="text-sm font-medium">{resumeFile.name}</span>
-                </div>
-              ) : (
-                <div className="text-slate-400">
-                  <Upload size={24} className="mx-auto mb-2" />
-                  <p className="text-sm">Click to upload resume (PDF, DOC)</p>
-                  <p className="text-xs mt-1">Max 10 MB</p>
-                </div>
-              )}
-            </label>
-          </div>
-
-          <button type="submit" disabled={loading || (!isLocked && (!nameConfirmed || !photoConfirmed))} className="btn-primary py-3.5 text-base">
-            {loading ? <><span className="spinner" /> Saving…</> : 'Save & Go to Dashboard →'}
-          </button>
         </form>
 
-        {/* ── Completion sidebar ── */}
-        <div>
-          <CompletionPanel completedCount={completedCount} totalCount={checks.length} />
-        </div>
+        {/* ── Completion panel ── */}
+        <CompletionPanel pct={pct} />
       </div>
     </div>
   );

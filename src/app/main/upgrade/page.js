@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { Check, Zap, Lock } from 'lucide-react';
+import { Check, Zap } from 'lucide-react';
 import OrderSummary from '@/components/pricing/OrderSummary';
 import { useAppDispatch } from '@/store/hooks';
 import { updatePlan } from '@/store/slices/authSlice';
@@ -22,15 +22,14 @@ const PLANS = [
     name: 'Standard',
     price: '₹499',
     period: '/ month',
-    description: 'Guided mock practice at a student-friendly price.',
+    description: 'Perfect to get started with guided mock practice at a student-friendly price.',
     features: [
       '10 mock interviews with AI avatar',
-      'Each mock under 5 min or 4–5 questions',
+      'Each mock under 5 minutes or 4 to 5 questions',
       '4 full interviews up to 15 minutes',
       'Basic report after each session',
-      'Email support',
+      { before: 'Email support' },
     ],
-    locked: 'Detailed reports & job assistance locked — upgrade to Premium.',
     badge: null,
   },
   {
@@ -38,10 +37,10 @@ const PLANS = [
     name: 'Premium',
     price: '₹899',
     period: '/ month',
-    description: 'Best value for serious preparation with deeper analysis and job support.',
+    description: 'Best value for serious preparation with more attempts, deeper analysis, and job support.',
     features: [
       '20 mock interviews with AI avatar',
-      'Each mock under 5 min or 4–5 questions',
+      'Each mock under 5 minutes or 4 to 5 questions',
       '8 full interviews up to 15 minutes',
       'Detailed report with stronger insights',
       'Job assistance included',
@@ -52,17 +51,18 @@ const PLANS = [
 ];
 
 export default function UpgradePage() {
-  const router   = useRouter();
+  const router = useRouter();
   const dispatch = useAppDispatch();
 
   const [selectedPlan, setSelectedPlan] = useState('premium');
-  const [loading, setLoading]           = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleProceed = async ({ plan }) => {
     setLoading(true);
     try {
       await new Promise((r) => setTimeout(r, 600));
       dispatch(updatePlan(plan));
+      sessionStorage.setItem('demo_plan', plan);
       toast.success('Plan updated successfully!');
       router.push('/main/dashboard');
     } catch {
@@ -89,11 +89,10 @@ export default function UpgradePage() {
               <div
                 key={plan.id}
                 onClick={() => setSelectedPlan(plan.id)}
-                className={`relative rounded-2xl border-2 p-5 cursor-pointer transition-all bg-white ${
-                  selected
+                className={`relative rounded-2xl border-2 p-5 cursor-pointer transition-all bg-white ${selected
                     ? 'border-blue-500 shadow-md shadow-blue-100'
                     : 'border-slate-200 hover:border-blue-200'
-                }`}
+                  }`}
               >
                 {plan.badge && (
                   <span className="absolute -top-3 left-5 flex items-center gap-1 px-3 py-0.5 bg-blue-600 text-white text-xs font-bold rounded-full shadow">
@@ -102,9 +101,8 @@ export default function UpgradePage() {
                 )}
 
                 <div className="flex items-start gap-4">
-                  <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
-                    selected ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
-                  }`}>
+                  <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${selected ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
+                    }`}>
                     {selected && <div className="w-2 h-2 rounded-full bg-white" />}
                   </div>
 
@@ -121,24 +119,15 @@ export default function UpgradePage() {
                     </div>
 
                     <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
-                      {plan.features.map((f) => (
-                        <li key={f} className="flex items-start gap-1.5 text-xs text-slate-600">
+                      {plan.features.map((f, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs text-slate-600">
                           <Check size={13} className={`flex-shrink-0 mt-0.5 ${plan.id === 'premium' ? 'text-blue-500' : 'text-green-500'}`} />
-                          {f}
+                          {typeof f === 'string' ? f : (
+                            <>{f.before}<s className="text-slate-400">{f.strike}</s>{f.after}</>
+                          )}
                         </li>
                       ))}
                     </ul>
-
-                    {plan.locked && (
-                      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 relative overflow-hidden">
-                        <p className="text-xs text-slate-400 blur-sm select-none">{plan.locked}</p>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-full border border-slate-200 shadow-sm text-xs font-medium text-slate-600">
-                            <Lock size={11} /> Premium report preview locked
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

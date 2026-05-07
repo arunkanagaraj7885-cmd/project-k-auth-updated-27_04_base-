@@ -15,9 +15,6 @@ export const signupSchema = z.object({
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
   confirmPassword: z.string(),
-  whatsappNumber: z.string()
-    .min(1, 'WhatsApp number is required')
-    .refine((val) => isValidPhoneNumber(val), 'Enter a valid mobile number for the selected country'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],

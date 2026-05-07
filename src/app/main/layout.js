@@ -88,9 +88,10 @@ export default function MainLayout({ children }) {
             // Middleware already enforces the redirect; don't touch the cookie
           } else if (onbStep === 'profile') {
             // New user who selected a plan but hasn't finished profile setup
+            const savedPlan = sessionStorage.getItem('demo_plan') || 'free';
             dispatch(setCredentials({
-              user: { id: 'demo-001', name: 'Demo User', email: 'demo@demo.com', first_name: 'Demo', last_name: 'User', avatar_url: null, plan: 'premium' },
-              plan: 'premium',
+              user: { id: 'demo-001', name: 'Demo User', email: 'demo@demo.com', first_name: 'Demo', last_name: 'User', avatar_url: null, plan: savedPlan },
+              plan: savedPlan,
               onboarding_complete: false,
               plan_selected: true,
             }));
@@ -100,6 +101,7 @@ export default function MainLayout({ children }) {
             // Prefer the name saved by profile-setup (survives the hard reload).
             const savedRaw = sessionStorage.getItem('demo_user');
             const saved = savedRaw ? JSON.parse(savedRaw) : null;
+            const savedPlan = sessionStorage.getItem('demo_plan') || 'free';
             dispatch(setCredentials({
               user: {
                 id: 'demo-001',
@@ -108,9 +110,9 @@ export default function MainLayout({ children }) {
                 first_name: saved?.first_name || 'Demo',
                 last_name:  saved?.last_name  || 'User',
                 avatar_url: null,
-                plan: 'premium',
+                plan: savedPlan,
               },
-              plan: 'premium',
+              plan: savedPlan,
               onboarding_complete: true,
               plan_selected: true,
             }));

@@ -1,23 +1,17 @@
 'use client';
 import { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { CheckCircle2 } from 'lucide-react';
-import PhoneInput from 'react-phone-number-input';
-import 'react-phone-number-input/style.css';
 import Logo from '@/components/shared/Logo';
 import PasswordInput from '@/components/auth/PasswordInput';
-import OTPModal from '@/components/auth/OTPModal';
 import { signupSchema } from '@/lib/validations';
 import { authApi } from '@/lib/api/auth';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/slices/authSlice';
 
-
-// Cookie helper (client-side) for onboarding step
 function setOnbCookie(val) {
   document.cookie = `pk_onb=${val}; path=/; max-age=86400; SameSite=Lax`;
 }
@@ -27,17 +21,11 @@ export default function SignupPage() {
   const dispatch = useAppDispatch();
 
   const [loading, setLoading]           = useState(false);
-  const [sendingOtp, setSendingOtp]     = useState(false);
-  const [otpModalOpen, setOtpModalOpen] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [currentPhone, setCurrentPhone] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
-    control,
-    getValues,
     formState: { errors },
   } = useForm({ resolver: zodResolver(signupSchema) });
 
@@ -45,8 +33,6 @@ export default function SignupPage() {
   const handleGoogleSignup = async () => {
     setGoogleLoading(true);
     try {
-      // Redirect to backend Google OAuth; backend will set the access_token
-      // cookie and redirect back to /auth/google-callback
       const callbackUrl = encodeURIComponent(`${window.location.origin}/auth/google-callback?onboarding=1`);
       window.location.href = `/api/auth/google?redirect_uri=${callbackUrl}`;
     } catch {
@@ -55,27 +41,8 @@ export default function SignupPage() {
     }
   };
 
-  /* ── WhatsApp OTP ─────────────────────────────────────────────────────── */
-  const handleSendOtp = async () => {
-    const phone = getValues('whatsappNumber');
-    if (!phone) {
-      toast.error('Enter a valid mobile number first.');
-      return;
-    }
-    setSendingOtp(true);
-    // DEMO: auto-verify without real OTP
-    await new Promise((r) => setTimeout(r, 500));
-    setPhoneVerified(true);
-    setSendingOtp(false);
-    toast.success('Phone verified!');
-  };
-
   /* ── Form submit ──────────────────────────────────────────────────────── */
   const onSubmit = async (data) => {
-    if (!phoneVerified) {
-      toast.error('Please verify your WhatsApp number first.');
-      return;
-    }
     setLoading(true);
     try {
       // DEMO: bypass real registration — accept any valid-format inputs
@@ -97,7 +64,7 @@ export default function SignupPage() {
       setOnbCookie('plan');
       toast.success('Account created! Now choose your plan.');
       router.push('/pricing?onboarding=1');
-    } catch (err) {
+    } catch {
       toast.error('Something went wrong. Try again.');
     } finally {
       setLoading(false);
@@ -131,7 +98,6 @@ export default function SignupPage() {
             <span className="spinner spinner-brand" />
           ) : (
             <>
-              {/* Google "G" colour logo */}
               <svg width="18" height="18" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M43.611 20.083H42V20H24V28H35.303C33.654 32.657 29.223 36 24 36C17.373 36 12 30.627 12 24C12 17.373 17.373 12 24 12C27.059 12 29.842 13.154 31.961 15.039L37.618 9.382C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24C4 35.045 12.955 44 24 44C35.045 44 44 35.045 44 24C44 22.659 43.862 21.35 43.611 20.083Z" fill="#FFC107"/>
                 <path d="M6.306 14.691L12.877 19.51C14.655 15.108 18.961 12 24 12C27.059 12 29.842 13.154 31.961 15.039L37.618 9.382C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691Z" fill="#FF3D00"/>
@@ -146,7 +112,7 @@ export default function SignupPage() {
         {/* ── Divider ── */}
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-1 h-px bg-slate-200" />
-          <span className="text-xs text-slate-400 font-medium">or with WhatsApp</span>
+          <span className="text-xs text-slate-400 font-medium">or with email</span>
           <div className="flex-1 h-px bg-slate-200" />
         </div>
 
@@ -170,7 +136,7 @@ export default function SignupPage() {
               <input
                 {...register('lastName')}
                 type="text"
-                placeholder="Last name"
+                placeholder="Last name / Initial"
                 className={`input-base ${errors.lastName ? 'error' : ''}`}
                 autoComplete="family-name"
               />
@@ -203,59 +169,15 @@ export default function SignupPage() {
             />
             <PasswordInput
               register={register('confirmPassword')}
-              placeholder="Confirm"
+              placeholder="Confirm password"
               error={errors.confirmPassword?.message}
             />
           </div>
 
-          {/* WhatsApp + Verify */}
-          <div>
-            <div className="flex gap-2">
-              <div className={`flex-1 flex items-center border rounded-xl px-3 bg-white transition-colors ${
-                errors.whatsappNumber ? 'border-red-400' : 'border-slate-200 focus-within:border-blue-400'
-              }`}>
-                <Controller
-                  name="whatsappNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <PhoneInput
-                      {...field}
-                      defaultCountry="IN"
-                      international
-                      placeholder="WhatsApp number"
-                      onChange={(val) => { field.onChange(val); setPhoneVerified(false); }}
-                      className="w-full text-sm py-2.5"
-                    />
-                  )}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleSendOtp}
-                disabled={sendingOtp || phoneVerified}
-                className="btn-secondary flex-shrink-0 px-4 whitespace-nowrap"
-                style={{ width: 'auto' }}
-              >
-                {sendingOtp ? <span className="spinner spinner-brand" /> : 'Verify'}
-              </button>
-            </div>
-            {errors.whatsappNumber && (
-              <p className="mt-1 text-xs text-red-500">{errors.whatsappNumber.message}</p>
-            )}
-          </div>
-
-          {/* Verified badge */}
-          {phoneVerified && (
-            <div className="flex items-center gap-2 -mt-1">
-              <CheckCircle2 size={16} className="text-green-500" />
-              <span className="text-sm text-green-600 font-medium">WhatsApp verified</span>
-            </div>
-          )}
-
           {/* Submit */}
           <button
             type="submit"
-            disabled={loading || !phoneVerified}
+            disabled={loading}
             className="btn-primary mt-1"
           >
             {loading ? <span className="spinner" /> : 'Create Account →'}
@@ -269,17 +191,6 @@ export default function SignupPage() {
           </Link>
         </p>
       </div>
-
-      {/* OTP Modal */}
-      <OTPModal
-        open={otpModalOpen}
-        phone={currentPhone}
-        onSuccess={() => {
-          setPhoneVerified(true);
-          setOtpModalOpen(false);
-        }}
-        onClose={() => setOtpModalOpen(false)}
-      />
     </div>
   );
 }

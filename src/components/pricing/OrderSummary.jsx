@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Tag, Shield } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { paymentsApi } from '@/lib/api/payments';
 import toast from 'react-hot-toast';
 
@@ -53,17 +53,14 @@ export default function OrderSummary({ selectedPlan, onProceed, loading }) {
         <div className="mb-5">
           <label className="block text-xs font-medium text-slate-600 mb-2">Coupon code</label>
           <div className="flex gap-2">
-            <div className="flex-1 relative">
-              <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={coupon}
-                onChange={(e) => { setCoupon(e.target.value.toUpperCase()); setCouponApplied(false); setDiscount(0); }}
-                placeholder="Enter coupon"
-                className="input-base pl-9 text-sm"
-                disabled={couponApplied}
-              />
-            </div>
+            <input
+              type="text"
+              value={coupon}
+              onChange={(e) => { setCoupon(e.target.value.toUpperCase()); setCouponApplied(false); setDiscount(0); }}
+              placeholder="Enter coupon"
+              className="input-base flex-1 text-sm"
+              disabled={couponApplied}
+            />
             <button
               onClick={handleApplyCoupon}
               disabled={validatingCoupon || couponApplied || !coupon}
