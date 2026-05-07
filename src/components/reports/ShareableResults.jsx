@@ -1,13 +1,33 @@
 'use client';
-import toast from 'react-hot-toast';
+import { useState } from 'react';
+import { pdf } from '@react-pdf/renderer';
+import { useScoreCard } from '@/hooks/useReport';
+import ScoreCardPDF from './ScoreCardPDF';
 
 export default function ShareableResults({ reportId, score }) {
+  const { data: card } = useScoreCard(reportId);
+  const [downloading, setDownloading] = useState(false);
+
   const scoreCardUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/score-card/${reportId}`
     : '';
 
-  const handleDownload = () => {
-    toast.success('Score card download starting…');
+  const handleDownload = async () => {
+    if (!card) return;
+    setDownloading(true);
+    try {
+      const blob = await pdf(<ScoreCardPDF card={card} />).toBlob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `score-card-${card.role?.replace(/\s+/g, '-').toLowerCase() ?? reportId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const handleLinkedIn = () => {
@@ -36,9 +56,17 @@ export default function ShareableResults({ reportId, score }) {
       <div className="space-y-2">
         <button
           onClick={handleDownload}
-          className="w-full py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
+          disabled={!card || downloading}
+          className="w-full py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          Download Score Card
+          {downloading ? (
+            <>
+              <span className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+              Generating PDF…
+            </>
+          ) : (
+            'Download Score Card'
+          )}
         </button>
         <button
           onClick={handleLinkedIn}

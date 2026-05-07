@@ -45,27 +45,34 @@ export default function SignupPage() {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      // DEMO: bypass real registration — accept any valid-format inputs
-      await fetch('/api/auth/demo-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: data.email }),
-      });
-      const demoUser = {
-        id: 'demo-001',
+      const res = await authApi.register(data);
+      const payload = res.data;
+
+      const userObj = {
+        id: payload.user_id || payload.id || null,
         name: `${data.firstName} ${data.lastName}`,
         email: data.email,
         first_name: data.firstName,
         last_name: data.lastName,
-        avatar_url: null,
-        plan: 'free',
+        avatar_url: payload.avatar_url || null,
+        plan: payload.plan || 'free',
       };
-      dispatch(setCredentials({ user: demoUser, plan: 'free', onboarding_complete: false, plan_selected: false }));
+
+      dispatch(setCredentials({
+        user: userObj,
+        plan: payload.plan || 'free',
+        onboarding_complete: false,
+        plan_selected: false,
+      }));
       setOnbCookie('plan');
       toast.success('Account created! Now choose your plan.');
       router.push('/pricing?onboarding=1');
-    } catch {
-      toast.error('Something went wrong. Try again.');
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d) => d.msg).join(', ')
+        : detail || err.response?.data?.message || 'Registration failed. Please try again.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -157,6 +164,20 @@ export default function SignupPage() {
             />
             {errors.email && (
               <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+            )}
+          </div>
+
+          {/* Phone number */}
+          <div>
+            <input
+              {...register('phoneNumber')}
+              type="tel"
+              placeholder="Phone number (e.g. +91 9876543210)"
+              className={`input-base ${errors.phoneNumber ? 'error' : ''}`}
+              autoComplete="tel"
+            />
+            {errors.phoneNumber && (
+              <p className="mt-1 text-xs text-red-500">{errors.phoneNumber.message}</p>
             )}
           </div>
 

@@ -113,13 +113,11 @@ export default function AppSidebar() {
               }`}
               title={!sidebarOpen ? label : undefined}
             >
-              {!sidebarOpen && <Icon size={18} className="flex-shrink-0" />}
-              {sidebarOpen && <span className="flex-1">{label}</span>}
-              {sidebarOpen && locked && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-transparent text-[#7b7f8c]">
-                  Pro
-                </span>
-              )}
+              <Icon size={18} className="flex-shrink-0" />
+              <span className={`flex-1 truncate ${sidebarOpen ? '' : 'hidden'}`}>{label}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded text-[#7b7f8c] ${sidebarOpen && locked ? '' : 'hidden'}`}>
+                Pro
+              </span>
             </Link>
           );
         })}
@@ -149,19 +147,13 @@ export default function AppSidebar() {
                   key={href}
                   href={href}
                   onClick={() => setMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
-                    accent
-                      ? 'text-[#2b3240] hover:bg-[#f4f6fa]'
-                      : 'text-[#2b3240] hover:bg-[#f4f6fa]'
-                  }`}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#2b3240] hover:bg-[#f4f6fa] transition-colors"
                 >
                   <Icon size={16} className="flex-shrink-0" />
-                  <span>{label}</span>
-                  {accent && (
-                    <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
-                      ✦
-                    </span>
-                  )}
+                  <span className="flex-1">{label}</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 ${accent ? '' : 'hidden'}`}>
+                    ✦
+                  </span>
                 </Link>
               ))}
             </div>

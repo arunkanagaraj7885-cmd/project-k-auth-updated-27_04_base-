@@ -1,68 +1,83 @@
 'use client';
+import { Suspense, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { MessageCircle, User, Star, ShieldCheck, Globe, Calendar, Briefcase, Video } from 'lucide-react';
 import { useScoreCard } from '@/hooks/useReport';
-import { formatDate } from '@/lib/utils';
 
-/* ── Inline amber score ring (matches Figma orange ring) ── */
+/* ── Amber score ring ── */
 function ScoreRing({ score }) {
-  const r = 44;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (Math.min(score, 100) / 100) * circ;
+  const pct = Math.min(score, 100);
+  const deg = (pct / 100) * 360;
   return (
-    <svg width="110" height="110" viewBox="0 0 110 110" className="flex-shrink-0">
-      <circle cx="55" cy="55" r={r} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="9" />
-      <circle
-        cx="55" cy="55" r={r} fill="none"
-        stroke="#f59e0b" strokeWidth="9"
-        strokeDasharray={circ} strokeDashoffset={offset}
-        strokeLinecap="round"
-        transform="rotate(-90 55 55)"
-        style={{ transition: 'stroke-dashoffset 1s ease' }}
-      />
-      <text x="55" y="51" textAnchor="middle" fill="white" fontSize="22" fontWeight="700" fontFamily="sans-serif">
-        {score}
-      </text>
-      <text x="55" y="66" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="7" fontFamily="sans-serif" letterSpacing="1">
-        OVERALL SCORE
-      </text>
-    </svg>
+    <div style={{ width: 148, height: 148, position: 'relative' }}>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '50%',
+          background: `conic-gradient(from -90deg, #f59e0b 0deg, #f59e0b ${deg}deg, rgba(255,255,255,0.10) ${deg}deg 360deg)`,
+          padding: 11,
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            background: '#0d3d35',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+          }}
+        >
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: 44, lineHeight: 1 }}>{score}</span>
+          <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: 700, letterSpacing: 2, marginTop: 4 }}>SCORE</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
-/* ── Horizontal bar for core scores ── */
+/* ── Solid dark bar ── */
 function ScoreBar({ label, value }) {
   const pct = Math.min((value / 10) * 100, 100);
   return (
-    <div className="flex items-center gap-3">
-      <span className="w-40 text-sm text-slate-600 flex-shrink-0">{label}</span>
-      <div className="flex-1 h-2.5 bg-slate-200 rounded-full overflow-hidden">
-        <div className="h-full rounded-full bg-teal-800 transition-all duration-700" style={{ width: `${pct}%` }} />
+    <div className="flex items-center gap-4">
+      <span className="text-sm text-slate-700" style={{ width: 176, flexShrink: 0 }}>{label}</span>
+      <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <div className="h-full rounded-full bg-[#0d3d35]" style={{ width: `${pct}%` }} />
       </div>
-      <span className="w-8 text-right text-sm font-bold text-slate-700">{value}</span>
+      <span className="text-sm font-bold text-slate-800" style={{ width: 36, textAlign: 'right' }}>{value}</span>
     </div>
   );
 }
 
-/* ── Simple QR-style placeholder grid ── */
-function QRCode() {
-  const cells = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1];
+/* ── Corner dot pattern ── */
+function CornerDots({ corner = 'tl' }) {
+  const posClass = corner === 'tl' ? 'top-0 left-0' : 'top-0 right-0';
   return (
-    <div className="w-12 h-12 bg-teal-900 rounded-md p-1 grid grid-cols-5 gap-px flex-shrink-0">
-      {cells.map((on, i) => (
-        <div key={i} className={`rounded-sm ${on ? 'bg-white' : 'bg-teal-700'}`} />
-      ))}
+    <div className={`absolute ${posClass} w-40 h-40 opacity-[0.18] pointer-events-none`}>
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id={`dots-${corner}`} x="0" y="0" width="18" height="18" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1.8" fill="white" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill={`url(#dots-${corner})`} />
+      </svg>
     </div>
   );
 }
 
-export default function ScoreCardPage() {
+function ScoreCardInner() {
   const { id } = useParams();
   const { data: card, isLoading } = useScoreCard(id);
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <div className="spinner spinner-brand" style={{ width: 40, height: 40, borderWidth: 3 }} />
+        <div className="w-10 h-10 border-[3px] border-amber-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -72,150 +87,183 @@ export default function ScoreCardPage() {
       <div className="min-h-screen flex items-center justify-center bg-slate-100 text-center">
         <div>
           <p className="text-slate-500 mb-3">Score card not found or has been removed.</p>
-          <a href="/auth/login" className="text-blue-600 hover:underline text-sm">Try Project K →</a>
+          <a href="/auth/login" className="text-teal-700 hover:underline text-sm">Try Project K →</a>
         </div>
       </div>
     );
   }
 
+  const [date, setDate] = useState('');
+  useEffect(() => {
+    setDate(new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }));
+  }, []);
+
   return (
-    <div className="min-h-screen bg-slate-200 flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+    <div className="min-h-screen bg-slate-100 flex items-start justify-center py-10 px-4">
+      {/* A4 portrait card */}
+      <div className="bg-white shadow-2xl flex flex-col" style={{ width: 794, minHeight: 1123 }}>
 
-        {/* ── Header ── */}
-        <div className="bg-teal-900 px-7 py-5 flex items-center gap-6">
+        {/* ══ HEADER ══ */}
+        <div className="relative bg-[#0d3d35] flex flex-col items-center px-12 pt-10 pb-10 overflow-hidden">
+          <CornerDots corner="tl" />
+          <CornerDots corner="tr" />
 
-          {/* Brand + title */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="w-9 h-9 rounded-lg bg-teal-700 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">K</span>
-            </div>
-            <div>
-              <p className="text-white font-bold text-sm leading-tight">Project K Interview Score Card</p>
-              <p className="text-teal-400 text-xs mt-0.5">Quick recruiter-friendly summary</p>
-            </div>
+          {/* K Logo */}
+          <div className="relative z-10 w-14 h-14 rounded-2xl bg-teal-600 flex items-center justify-center mb-5 shadow-lg">
+            <span className="text-white font-extrabold text-2xl tracking-tight">K</span>
           </div>
+
+          <h1 className="relative z-10 text-white font-extrabold text-3xl mb-2 tracking-tight text-center">
+            Project K Interview Score Card
+          </h1>
+          <p className="relative z-10 text-teal-400 text-sm mb-8">Quick recruiter-friendly summary</p>
 
           {/* Score ring */}
-          <ScoreRing score={card.score} />
-
-          {/* Readiness label */}
-          <div className="flex-1 min-w-0">
-            <h2 className="text-white text-lg font-bold leading-snug">{card.readiness_label}</h2>
-            <p className="text-teal-200 text-xs mt-1 leading-relaxed">{card.readiness_desc}</p>
+          <div className="relative z-10 mb-6">
+            <ScoreRing score={card.score} />
           </div>
 
-          {/* Candidate info */}
-          <div className="text-right flex-shrink-0">
-            <p className="text-white font-bold text-base">{card.candidate_name}</p>
-            <p className="text-teal-300 text-xs mt-1">Role: {card.role}</p>
-            <p className="text-teal-300 text-xs">Date: {formatDate(card.completed_at)}</p>
-          </div>
+          <h2 className="relative z-10 text-white font-bold text-2xl mb-2 text-center">{card.readiness_label}</h2>
+          <p className="relative z-10 text-slate-300 text-sm text-center leading-relaxed" style={{ maxWidth: 480 }}>
+            {card.readiness_desc}
+          </p>
         </div>
 
-        {/* ── Body ── */}
-        <div className="grid grid-cols-5 divide-x divide-slate-200">
+        {/* ══ BODY ══ */}
+        <div className="flex flex-col flex-1 px-10 py-8 gap-6">
 
-          {/* Left column */}
-          <div className="col-span-3 p-6 space-y-5">
-
-            {/* Snapshot */}
-            <div className="bg-slate-50 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-800 text-sm">Snapshot</h3>
-                <span className="text-xs text-slate-400">What matters most</span>
+          {/* Candidate chip */}
+          <div className="bg-[#0d3d35] rounded-2xl px-6 py-5 flex items-center gap-5">
+            <div className="w-14 h-14 rounded-full bg-teal-500 flex items-center justify-center flex-shrink-0">
+              <User size={26} className="text-white" />
+            </div>
+            <p className="text-white font-bold text-xl leading-none">{card.candidate_name}</p>
+            <div className="self-stretch w-px bg-white/20 mx-2" />
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-2 text-sm text-teal-200">
+                <Briefcase size={13} className="text-teal-400 flex-shrink-0" />
+                <span><span className="text-teal-400 font-semibold">Role:</span> {card.role}</span>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white rounded-xl p-3 border border-slate-100">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide mb-1.5">Communication</p>
-                  <p className="text-xl font-bold text-slate-800">{card.snapshot.communication}<span className="text-sm font-normal text-slate-500">/10</span></p>
-                  <p className="text-xs text-slate-500 mt-1">{card.snapshot.communication_label}</p>
-                </div>
-                <div className="bg-white rounded-xl p-3 border border-slate-100">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide mb-1.5">Confidence</p>
-                  <p className="text-xl font-bold text-slate-800">{card.snapshot.confidence}<span className="text-sm font-normal text-slate-500">/10</span></p>
-                  <p className="text-xs text-slate-500 mt-1">{card.snapshot.confidence_label}</p>
-                </div>
-                <div className="bg-white rounded-xl p-3 border border-slate-100">
-                  <p className="text-xs text-slate-400 uppercase tracking-wide mb-1.5">Recommendation</p>
-                  <p className="text-xl font-bold text-teal-700">{card.snapshot.recommendation}</p>
-                  <p className="text-xs text-slate-500 mt-1">{card.snapshot.recommendation_label}</p>
-                </div>
+              <div className="flex items-center gap-2 text-sm text-teal-200">
+                <Video size={13} className="text-teal-400 flex-shrink-0" />
+                <span><span className="text-teal-400 font-semibold">Mode:</span> {card.mode === 'full' ? 'Full Interview' : 'Mock Interview'}</span>
               </div>
             </div>
-
-            {/* Core Scores */}
-            <div className="bg-slate-50 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-slate-800 text-sm">Core Scores</h3>
-                <span className="text-xs text-slate-400">Simple score view</span>
-              </div>
-              <div className="space-y-3.5">
-                {card.core_scores.map((s) => (
-                  <ScoreBar key={s.label} label={s.label} value={s.value} />
-                ))}
-              </div>
-            </div>
-
-            {/* Download */}
-            <button
-              onClick={() => window.print()}
-              className="px-7 py-3 bg-teal-900 hover:bg-teal-800 text-white rounded-xl font-semibold text-sm transition-colors"
-            >
-              Download
-            </button>
           </div>
 
-          {/* Right column */}
-          <div className="col-span-2 p-6 space-y-4">
-
-            {/* Candidate Profile */}
-            <div className="bg-slate-50 rounded-xl p-4">
-              <h3 className="font-bold text-slate-800 text-sm mb-3">Candidate Profile</h3>
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
-                  <span className="text-slate-600 font-bold text-sm">{card.initials}</span>
+          {/* Snapshot */}
+          <div className="border border-slate-200 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-slate-800 text-base">Snapshot</h3>
+              <span className="text-xs text-slate-400">What matters most</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {/* Communication */}
+              <div className="border border-slate-100 rounded-xl p-5 flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-teal-50 flex items-center justify-center mb-3">
+                  <MessageCircle size={22} className="text-teal-600" />
                 </div>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  This score card highlights only the recruiter-relevant points, so the profile can be reviewed in less than a minute.
+                <p className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-2">Communication</p>
+                <p className="text-2xl font-bold text-slate-800 leading-none mb-1.5">
+                  {card.snapshot.communication}<span className="text-sm font-normal text-slate-400">/10</span>
                 </p>
+                <p className="text-xs text-slate-500">{card.snapshot.communication_label}</p>
               </div>
-            </div>
-
-            {/* Key Summary */}
-            <div className="bg-slate-50 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-800 text-sm">Key Summary</h3>
-                <span className="text-xs text-slate-400">Easy to scan</span>
-              </div>
-              <div className="space-y-2">
-                {card.key_summary.map((item, i) => (
-                  <div key={i} className="flex items-start gap-2.5 bg-white rounded-lg p-2.5 border border-slate-100">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${item.type === 'positive' ? 'bg-green-500' : 'bg-amber-400'}`} />
-                    <p className="text-xs text-slate-600 leading-relaxed">{item.text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Verified + QR */}
-            <div className="flex items-end justify-between pt-1">
-              <div>
-                <p className="text-xs text-slate-500 font-medium leading-snug">Verified by Project K AI Interview Assessment</p>
-                <p className="text-xs text-slate-400 mt-0.5">Recruiter view generated for quick screening</p>
-              </div>
-              <div className="relative group cursor-pointer">
-                <QRCode />
-                <div className="absolute bottom-full right-0 mb-2 w-44 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none leading-relaxed">
-                  QR code to view the same digitally. This will protect from Duplicate
+              {/* Confidence */}
+              <div className="border border-slate-100 rounded-xl p-5 flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+                  <User size={22} className="text-blue-500" />
                 </div>
+                <p className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-2">Confidence</p>
+                <p className="text-2xl font-bold text-slate-800 leading-none mb-1.5">
+                  {card.snapshot.confidence}<span className="text-sm font-normal text-slate-400">/10</span>
+                </p>
+                <p className="text-xs text-slate-500">{card.snapshot.confidence_label}</p>
+              </div>
+              {/* Recommendation */}
+              <div className="border border-slate-100 rounded-xl p-5 flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mb-3">
+                  <Star size={22} className="text-green-500 fill-green-500" />
+                </div>
+                <p className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-2">Recommendation</p>
+                <p className="text-2xl font-bold text-teal-700 leading-none mb-1.5">{card.snapshot.recommendation}</p>
+                <p className="text-xs text-slate-500">{card.snapshot.recommendation_label}</p>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <p className="text-slate-500 text-xs mt-4">projectk.io · AI Interview Coaching</p>
+          {/* Core Scores */}
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-slate-800 text-base">Core Scores</h3>
+              <span className="text-xs text-slate-400">Simple score view</span>
+            </div>
+            <div className="flex flex-col gap-4">
+              {card.core_scores.map((s) => (
+                <ScoreBar key={s.label} label={s.label} value={s.value} />
+              ))}
+            </div>
+          </div>
+
+          {/* Key Summary */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 text-base">Key Summary</h3>
+              <span className="text-xs text-slate-400">Easy to scan</span>
+            </div>
+            <div className="flex flex-col gap-3.5">
+              {card.key_summary.map((item, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div
+                    className={`rounded-full flex-shrink-0 mt-1.5 ${item.type === 'positive' ? 'bg-green-500' : 'bg-amber-400'}`}
+                    style={{ width: 10, height: 10 }}
+                  />
+                  <p className="text-sm text-slate-600 leading-relaxed">{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Verified badge */}
+          <div className="border border-slate-200 rounded-2xl p-5 flex items-center gap-4 bg-slate-50/60 mt-auto">
+            <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck size={24} className="text-teal-600" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 text-sm">Verified by Project K AI Interview Assessment</p>
+              <p className="text-xs text-slate-500 mt-0.5">Recruiter view generated for quick screening</p>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ══ FOOTER ══ */}
+        <div className="px-10 py-4 border-t border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Globe size={15} className="text-slate-500" />
+            <span className="font-bold text-slate-800 text-sm">projectk.io</span>
+            <span className="text-slate-300 text-base mx-1">|</span>
+            <span className="text-slate-500 text-sm">AI Interview Coaching</span>
+          </div>
+          <div className="flex items-center gap-2 text-slate-400 text-sm">
+            <Calendar size={14} />
+            <span>Generated on {date}</span>
+          </div>
+        </div>
+
+      </div>
     </div>
+  );
+}
+
+export default function ScoreCardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <ScoreCardInner />
+    </Suspense>
   );
 }
