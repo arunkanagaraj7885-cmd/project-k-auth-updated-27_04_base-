@@ -19,20 +19,22 @@ export default function ReportHeroBanner({ score, summary, plan, userName = 'the
           </p>
           
           <div className="flex flex-wrap gap-4">
-            <Link 
+            <Link
               href="/main/start-interview"
               className="px-6 py-2.5 bg-white text-[#064e3b] rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-emerald-50 transition-all active:scale-[0.98]"
             >
               <RefreshCw size={16} />
               Retake Interview
             </Link>
-            <Link 
-              href="/pricing"
-              className="px-6 py-2.5 bg-emerald-800 text-white rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-emerald-700 transition-all active:scale-[0.98] border border-emerald-700"
-            >
-              <Zap size={16} className="text-emerald-400 fill-emerald-400" />
-              Upgrade to Premium
-            </Link>
+            {plan !== 'premium' && (
+              <Link
+                href="/pricing"
+                className="px-6 py-2.5 bg-emerald-800 text-white rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-emerald-700 transition-all active:scale-[0.98] border border-emerald-700"
+              >
+                <Zap size={16} className="text-emerald-400 fill-emerald-400" />
+                Upgrade to Premium
+              </Link>
+            )}
           </div>
         </div>
 

@@ -1,50 +1,47 @@
 'use client';
-import { ThumbsUp, TrendingUp } from 'lucide-react';
+
+const FALLBACK_INSIGHTS = [
+  { type: 'strength', title: 'Strong technical relevance', desc: 'Your examples matched the role well, especially when discussing frontend dashboards and optimization.' },
+  { type: 'strength', title: 'Good practical exposure', desc: 'You answered best when referring to real project situations instead of generic descriptions.' },
+  { type: 'improve',  title: 'Improve opening confidence', desc: 'A stronger and more direct introduction would improve first impression.' },
+];
 
 export default function KeyInsights({ insights = {} }) {
   const { strengths = [], improvements = [] } = insights;
 
-  return (
-    <div className="card p-5 mb-5">
-      <h3 className="font-semibold text-slate-800 mb-4">Key Insights</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-xl bg-green-50 border border-green-100 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <ThumbsUp size={15} className="text-green-600" />
-            <span className="text-sm font-semibold text-green-700">What went well</span>
-          </div>
-          {strengths.length ? (
-            <ul className="space-y-2">
-              {strengths.map((s, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-green-800">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0 mt-2" />
-                  {s}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-green-700 opacity-60">Complete more practice to unlock.</p>
-          )}
-        </div>
+  const items = (strengths.length || improvements.length)
+    ? [
+        ...strengths.map((s) => ({ type: 'strength', title: s.title || s, desc: s.desc || '' })),
+        ...improvements.map((s) => ({ type: 'improve', title: s.title || s, desc: s.desc || '' })),
+      ]
+    : FALLBACK_INSIGHTS;
 
-        <div className="rounded-xl bg-amber-50 border border-amber-100 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp size={15} className="text-amber-600" />
-            <span className="text-sm font-semibold text-amber-700">Areas to improve</span>
+  return (
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="font-bold text-slate-800">Key Insights</h3>
+        <span className="text-[11px] text-slate-400 font-medium">What went well and what to improve</span>
+      </div>
+      <div className="space-y-3">
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className={`rounded-2xl p-4 border ${
+              item.type === 'strength'
+                ? 'bg-green-50 border-green-100'
+                : 'bg-orange-50 border-orange-100'
+            }`}
+          >
+            <p className={`text-sm font-bold mb-1 ${item.type === 'strength' ? 'text-green-800' : 'text-orange-800'}`}>
+              {item.title}
+            </p>
+            {item.desc && (
+              <p className={`text-xs leading-relaxed ${item.type === 'strength' ? 'text-green-700' : 'text-orange-700'}`}>
+                {item.desc}
+              </p>
+            )}
           </div>
-          {improvements.length ? (
-            <ul className="space-y-2">
-              {improvements.map((s, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-amber-800">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 mt-2" />
-                  {s}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-amber-700 opacity-60">No data yet.</p>
-          )}
-        </div>
+        ))}
       </div>
     </div>
   );

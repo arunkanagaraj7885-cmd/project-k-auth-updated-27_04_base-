@@ -125,10 +125,34 @@ export default function ReportDetailPage() {
 
       {/* Premium-only sections (Full Feedback) */}
       {plan === 'premium' && (
-        <div className="space-y-8">
-          <KeyInsights insights={report?.insights ?? {}} />
-          <ActionPlan actions={report?.action_plan ?? []} />
-          <ShareableResults reportId={reportId} score={report?.score} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left — Key Insights + Action Plan */}
+          <div className="lg:col-span-2 space-y-6">
+            <KeyInsights insights={report?.insights ?? {}} />
+            <ActionPlan actions={report?.action_plan ?? []} />
+          </div>
+
+          {/* Right — Shareable Results + Try Again Soon */}
+          <div className="lg:col-span-1 space-y-6">
+            <ShareableResults reportId={reportId} score={report?.score} />
+
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-slate-800">Try Again Soon</h3>
+                <span className="text-[11px] text-slate-400 font-medium">Build consistency</span>
+              </div>
+              <div className="space-y-3">
+                <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+                  <p className="text-sm font-bold text-slate-800 mb-1">Best Retake Window</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">Retake this interview within 24 to 48 hours after reviewing your weak areas.</p>
+                </div>
+                <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+                  <p className="text-sm font-bold text-slate-800 mb-1">Suggested Schedule</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">Do one quick practice daily and one full interview every week.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

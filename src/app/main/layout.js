@@ -8,7 +8,6 @@ import { selectSidebarOpen } from '@/store/slices/uiSlice';
 import {
   selectOnboardingComplete,
   selectPlanSelected,
-  selectIsAuthed,
   setCredentials,
 } from '@/store/slices/authSlice';
 import { userApi } from '@/lib/api/user';
@@ -34,7 +33,6 @@ export default function MainLayout({ children }) {
   const router             = useRouter();
   const dispatch           = useAppDispatch();
   const sidebarOpen        = useAppSelector(selectSidebarOpen);
-  const isAuthed           = useAppSelector(selectIsAuthed);
   const onboardingComplete = useAppSelector(selectOnboardingComplete);
   const planSelected       = useAppSelector(selectPlanSelected);
 
@@ -69,55 +67,48 @@ export default function MainLayout({ children }) {
           setOnbCookie('done');
         }
       } catch {
-        // DEMO: backend unavailable — rehydrate Redux from the pk_onb cookie so
-        // we never override an in-progress onboarding flow with a "done" session.
-        if (!isAuthed) {
-          const onbStep = document.cookie
-            .split('; ')
-            .find((c) => c.startsWith('pk_onb='))
-            ?.split('=')[1];
+        // DEMO: backend unavailable — always rehydrate from cookie + sessionStorage.
+        // No isAuthed guard: if Redux was set by a prior in-memory navigation the
+        // plan could still be stale; sessionStorage is the authoritative source.
+        const onbStep = document.cookie
+          .split('; ')
+          .find((c) => c.startsWith('pk_onb='))
+          ?.split('=')[1];
 
-          if (onbStep === 'plan') {
-            // New user who hasn't picked a plan yet
-            dispatch(setCredentials({
-              user: { id: 'demo-001', name: 'Demo User', email: 'demo@demo.com', first_name: 'Demo', last_name: 'User', avatar_url: null, plan: 'free' },
-              plan: 'free',
-              onboarding_complete: false,
-              plan_selected: false,
-            }));
-            // Middleware already enforces the redirect; don't touch the cookie
-          } else if (onbStep === 'profile') {
-            // New user who selected a plan but hasn't finished profile setup
-            const savedPlan = sessionStorage.getItem('demo_plan') || 'free';
-            dispatch(setCredentials({
-              user: { id: 'demo-001', name: 'Demo User', email: 'demo@demo.com', first_name: 'Demo', last_name: 'User', avatar_url: null, plan: savedPlan },
+        const savedPlan = sessionStorage.getItem('demo_plan') || 'free';
+        const savedRaw  = sessionStorage.getItem('demo_user');
+        const saved     = savedRaw ? JSON.parse(savedRaw) : null;
+
+        if (onbStep === 'plan') {
+          dispatch(setCredentials({
+            user: { id: 'demo-001', name: 'Demo User', email: 'demo@demo.com', first_name: 'Demo', last_name: 'User', avatar_url: null, plan: 'free' },
+            plan: 'free',
+            onboarding_complete: false,
+            plan_selected: false,
+          }));
+        } else if (onbStep === 'profile') {
+          dispatch(setCredentials({
+            user: { id: 'demo-001', name: 'Demo User', email: 'demo@demo.com', first_name: 'Demo', last_name: 'User', avatar_url: null, plan: savedPlan },
+            plan: savedPlan,
+            onboarding_complete: false,
+            plan_selected: true,
+          }));
+        } else {
+          dispatch(setCredentials({
+            user: {
+              id: 'demo-001',
+              name:       saved?.name       || 'Demo User',
+              email:      'demo@demo.com',
+              first_name: saved?.first_name || 'Demo',
+              last_name:  saved?.last_name  || 'User',
+              avatar_url: null,
               plan: savedPlan,
-              onboarding_complete: false,
-              plan_selected: true,
-            }));
-            // Middleware already enforces the redirect; don't touch the cookie
-          } else {
-            // Returning user with no active onboarding — give full demo access.
-            // Prefer the name saved by profile-setup (survives the hard reload).
-            const savedRaw = sessionStorage.getItem('demo_user');
-            const saved = savedRaw ? JSON.parse(savedRaw) : null;
-            const savedPlan = sessionStorage.getItem('demo_plan') || 'free';
-            dispatch(setCredentials({
-              user: {
-                id: 'demo-001',
-                name:       saved?.name       || 'Demo User',
-                email:      'demo@demo.com',
-                first_name: saved?.first_name || 'Demo',
-                last_name:  saved?.last_name  || 'User',
-                avatar_url: null,
-                plan: savedPlan,
-              },
-              plan: savedPlan,
-              onboarding_complete: true,
-              plan_selected: true,
-            }));
-            setOnbCookie('done');
-          }
+            },
+            plan: savedPlan,
+            onboarding_complete: true,
+            plan_selected: true,
+          }));
+          setOnbCookie('done');
         }
       }
     };
