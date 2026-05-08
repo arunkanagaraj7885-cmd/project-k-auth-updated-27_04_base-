@@ -5,11 +5,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { Loader2 } from 'lucide-react';
 import Logo from '@/components/shared/Logo';
 import PasswordInput from '@/components/auth/PasswordInput';
 import { loginSchema } from '@/lib/validations';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/slices/authSlice';
+import { authApi } from '@/lib/api/auth';
+import { userApi } from '@/lib/api/user';
+import { saveTokens } from '@/lib/tokens';
 
 function setOnbCookie(val) {
   document.cookie = `pk_onb=${val}; path=/; max-age=86400; SameSite=Lax`;
@@ -29,44 +33,56 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      await fetch('/api/auth/demo-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: data.email }),
-      });
+      // Step 1: Authenticate — backend returns tokens in response body
+      const loginRes = await authApi.login({ email: data.email, password: data.password });
+      const { access_token, refresh_token } = loginRes.data;
 
-      const [firstName] = (data.email || 'demo@demo.com').split('@');
-      const demoFirstName = firstName ? firstName.slice(0, 1).toUpperCase() + firstName.slice(1) : 'Demo';
-      const user = {
-        id: 'demo-001',
-        email: data.email || 'demo@demo.com',
-        first_name: demoFirstName,
-        last_name: 'User',
-        is_first_login: false,
+      // Step 2: Persist tokens — axios request interceptor picks them up automatically
+      saveTokens(access_token, refresh_token);
+
+      // Step 3: Fetch profile — /auth/me returns a flat user object directly
+      const meRes = await userApi.getMe();
+      const u     = meRes.data;               // { id, first_name, last_name, email, ... }
+
+      // Use plan from backend → login response → previously stored selection → default
+      const plan = loginRes.data.plan || u.plan || sessionStorage.getItem('demo_plan') || 'free';
+
+      const userObj = {
+        id:         u.id         || null,
+        name:       `${u.first_name} ${u.last_name}`,
+        email:      u.email,
+        first_name: u.first_name,
+        last_name:  u.last_name,
+        avatar_url: u.avatar_url || null,
+        plan,
       };
 
+      // Fallback cache used by main layout when backend is temporarily unreachable
+      sessionStorage.setItem('demo_user', JSON.stringify(userObj));
+      sessionStorage.setItem('demo_plan', plan);
+
       dispatch(setCredentials({
-        user: {
-          id:         user.id,
-          name:       `${user.first_name} ${user.last_name}`,
-          email:      user.email,
-          first_name: user.first_name,
-          last_name:  user.last_name,
-          avatar_url: null,
-          plan:       'free',
-        },
-        plan:                'free',
-        onboarding_complete: !user.is_first_login,
-        plan_selected:       !user.is_first_login,
+        user:                userObj,
+        plan,
+        onboarding_complete: true,  // existing user — layout will gate if onboarding is incomplete
+        plan_selected:       true,
       }));
 
-      toast.success(`Welcome back, ${user.first_name}!`);
+      toast.success(`Welcome back, ${u.first_name}!`);
 
-      setOnbCookie('done');
-      router.push('/main/dashboard');
+      // Step 4: Respect any in-progress onboarding cookie, otherwise go to dashboard
+      const onbStep = document.cookie.split('; ').find((c) => c.startsWith('pk_onb='))?.split('=')[1];
+      if (onbStep === 'plan') {
+        router.push('/pricing?onboarding=1');
+      } else if (onbStep === 'profile') {
+        router.push('/main/profile-setup');
+      } else {
+        setOnbCookie('done');
+        router.push('/main/dashboard');
+      }
     } catch (err) {
       const detail = err.response?.data?.detail;
-      toast.error(detail || 'Invalid email or password.');
+      toast.error(typeof detail === 'string' ? detail : 'Invalid email or password.');
     } finally {
       setLoading(false);
     }
@@ -79,12 +95,13 @@ export default function LoginPage() {
           <Logo size="md" />
         </div>
 
+        <h2 className="text-center text-xl font-bold text-slate-800 mb-1">Welcome back</h2>
         <p className="text-center text-sm text-slate-500 mb-6">
-          Sign in to continue to{' '}
+          Sign in to{' '}
           <span className="font-semibold text-slate-700">Project K Interview Module</span>
         </p>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
           <div>
             <input
               {...register('email')}
@@ -98,24 +115,38 @@ export default function LoginPage() {
             )}
           </div>
 
-          <PasswordInput
-            register={register('password')}
-            error={errors.password?.message}
-          />
+          <div>
+            <PasswordInput
+              register={register('password')}
+              error={errors.password?.message}
+            />
+          </div>
 
-          <div className="flex items-center justify-between text-sm -mt-1">
-            <Link href="/auth/forgot-password" className="text-blue-600 hover:underline font-medium">
-              Forgot password
-            </Link>
-            <Link href="/auth/signup" className="text-blue-600 hover:underline font-medium">
-              Sign up
+          <div className="-mt-1">
+            <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:underline font-medium">
+              Forgot password?
             </Link>
           </div>
 
-          <button type="submit" disabled={loading} className="btn-primary mt-1">
-            {loading ? <span className="spinner" /> : 'Sign In'}
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary mt-1 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <><Loader2 size={16} className="animate-spin" /> Signing in…</>
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
+
+        <p className="text-center text-sm text-slate-500 mt-6">
+          Don&apos;t have an account?{' '}
+          <Link href="/auth/signup" className="text-blue-600 font-medium hover:underline">
+            Create one
+          </Link>
+        </p>
       </div>
     </div>
   );

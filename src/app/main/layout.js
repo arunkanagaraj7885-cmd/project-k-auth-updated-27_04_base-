@@ -42,34 +42,57 @@ export default function MainLayout({ children }) {
   useEffect(() => {
     const rehydrate = async () => {
       try {
+        // /auth/me returns a flat user object — no nested .user key
         const res  = await userApi.getMe();
-        const data = res.data;
+        const u    = res.data;
+        // Backend may not return plan — fall back to what the user selected locally
+        const plan = u.plan ?? sessionStorage.getItem('demo_plan') ?? 'free';
+
+        const userObj = {
+          id:         u.id         || null,
+          name:       `${u.first_name} ${u.last_name}`,
+          email:      u.email,
+          first_name: u.first_name,
+          last_name:  u.last_name,
+          avatar_url: u.avatar_url || null,
+          plan,
+        };
+
+        sessionStorage.setItem('demo_user', JSON.stringify(userObj));
+        sessionStorage.setItem('demo_plan', plan);
+
+        // Backend may not return onboarding_complete — use pk_onb cookie as source of truth.
+        // 'plan' or 'profile' → still in onboarding (false); 'done' or absent → complete (true)
+        const onbCookie = document.cookie.split('; ').find((c) => c.startsWith('pk_onb='))?.split('=')[1];
+        const onboardingComplete = u.onboarding_complete !== undefined
+          ? u.onboarding_complete
+          : (!onbCookie || onbCookie === 'done');
+
         dispatch(setCredentials({
-          user:                data.user,
-          plan:                data.plan ?? 'free',
-          onboarding_complete: data.onboarding_complete ?? false,
-          plan_selected:       data.plan_selected ?? false,
+          user:                userObj,
+          plan,
+          onboarding_complete: onboardingComplete,
+          plan_selected:       u.plan_selected ?? (onbCookie === 'done' || !onbCookie),
         }));
 
-        if (!data.onboarding_complete) {
-          if (!data.plan_selected && !pathname.startsWith('/main/profile-setup')) {
+        if (!onboardingComplete) {
+          const planSelected = u.plan_selected ?? (onbCookie === 'profile' || onbCookie === 'done');
+          if (!planSelected && !pathname.startsWith('/main/profile-setup')) {
             setOnbCookie('plan');
             router.replace('/pricing?onboarding=1');
             return;
           }
-          if (data.plan_selected && !pathname.startsWith('/main/profile-setup')) {
+          if (planSelected && !pathname.startsWith('/main/profile-setup')) {
             setOnbCookie('profile');
             router.replace('/main/profile-setup');
             return;
           }
-          if (data.plan_selected) setOnbCookie('profile');
+          if (planSelected) setOnbCookie('profile');
         } else {
           setOnbCookie('done');
         }
       } catch {
-        // DEMO: backend unavailable — always rehydrate from cookie + sessionStorage.
-        // No isAuthed guard: if Redux was set by a prior in-memory navigation the
-        // plan could still be stale; sessionStorage is the authoritative source.
+        // Backend unavailable or session expired — rehydrate from sessionStorage.
         const onbStep = document.cookie
           .split('; ')
           .find((c) => c.startsWith('pk_onb='))
@@ -77,33 +100,31 @@ export default function MainLayout({ children }) {
 
         const savedPlan = sessionStorage.getItem('demo_plan') || 'free';
         const savedRaw  = sessionStorage.getItem('demo_user');
-        const saved     = savedRaw ? JSON.parse(savedRaw) : null;
+        const savedUser = savedRaw ? (() => { try { return JSON.parse(savedRaw); } catch { return null; } })() : null;
+
+        // No stored user at all → session is truly gone, send to login
+        if (!savedUser) {
+          router.replace('/auth/login');
+          return;
+        }
 
         if (onbStep === 'plan') {
           dispatch(setCredentials({
-            user: { id: 'demo-001', name: 'Demo User', email: 'demo@demo.com', first_name: 'Demo', last_name: 'User', avatar_url: null, plan: 'free' },
+            user: savedUser,
             plan: 'free',
             onboarding_complete: false,
             plan_selected: false,
           }));
         } else if (onbStep === 'profile') {
           dispatch(setCredentials({
-            user: { id: 'demo-001', name: 'Demo User', email: 'demo@demo.com', first_name: 'Demo', last_name: 'User', avatar_url: null, plan: savedPlan },
+            user: { ...savedUser, plan: savedPlan },
             plan: savedPlan,
             onboarding_complete: false,
             plan_selected: true,
           }));
         } else {
           dispatch(setCredentials({
-            user: {
-              id: 'demo-001',
-              name:       saved?.name       || 'Demo User',
-              email:      'demo@demo.com',
-              first_name: saved?.first_name || 'Demo',
-              last_name:  saved?.last_name  || 'User',
-              avatar_url: null,
-              plan: savedPlan,
-            },
+            user: { ...savedUser, plan: savedPlan },
             plan: savedPlan,
             onboarding_complete: true,
             plan_selected: true,

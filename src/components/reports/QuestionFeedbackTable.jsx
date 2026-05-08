@@ -193,15 +193,9 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10">
               <tr className="bg-slate-50/95 border-b border-slate-100 backdrop-blur-sm">
-                <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-1/4">Question</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-[22%]">Your Answer</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-[22%]">AI Feedback</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-[22%]">
-                  <span className="flex items-center gap-1">
-                    Ideal Improvement
-                    {!isPremium && <Lock size={10} className="text-slate-300" />}
-                  </span>
-                </th>
+                <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-[25%]">Question</th>
+                <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-[28%]">Your Answer</th>
+                <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider w-[37%]">AI Feedback</th>
                 <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center w-[10%]">Score</th>
               </tr>
             </thead>
@@ -224,22 +218,7 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
                   </td>
 
                   {/* Ideal Improvement — blurred for non-premium */}
-                  <td className="px-6 py-6 align-top">
-                    {isPremium ? (
-                      <p className="text-[11px] text-slate-600 leading-relaxed">{q.ideal_answer || '—'}</p>
-                    ) : (
-                      <div className="relative">
-                        <p className="text-[11px] text-slate-600 leading-relaxed blur-[3px] select-none">
-                          {q.ideal_answer || 'Focus on clarity, concrete examples, and a structured answer format that demonstrates depth of knowledge.'}
-                        </p>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="flex items-center gap-1 bg-white/90 border border-slate-200 rounded-full px-2 py-0.5 text-[10px] text-slate-500 font-medium shadow-sm">
-                            <Lock size={9} /> Premium
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </td>
+                  
 
                   <td className="px-6 py-6 align-top text-center">
                     <span
@@ -262,12 +241,10 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
                     <td className="px-6 py-8"><div className="h-4 w-24 bg-slate-200 rounded mb-2" /><div className="h-3 w-32 bg-slate-100 rounded" /></td>
                     <td className="px-6 py-8"><div className="h-12 w-full bg-slate-50 rounded" /></td>
                     <td className="px-6 py-8"><div className="h-12 w-full bg-slate-50 rounded" /></td>
-                    <td className="px-6 py-8"><div className="h-12 w-full bg-slate-50 rounded" /></td>
                     <td className="px-6 py-8 text-center"><div className="h-6 w-12 bg-slate-100 rounded-full mx-auto" /></td>
                   </tr>
                   <tr className="blur-[6px] select-none pointer-events-none">
                     <td className="px-6 py-8"><div className="h-4 w-24 bg-slate-200 rounded mb-2" /><div className="h-3 w-32 bg-slate-100 rounded" /></td>
-                    <td className="px-6 py-8"><div className="h-12 w-full bg-slate-50 rounded" /></td>
                     <td className="px-6 py-8"><div className="h-12 w-full bg-slate-50 rounded" /></td>
                     <td className="px-6 py-8"><div className="h-12 w-full bg-slate-50 rounded" /></td>
                     <td className="px-6 py-8 text-center"><div className="h-6 w-12 bg-slate-100 rounded-full mx-auto" /></td>

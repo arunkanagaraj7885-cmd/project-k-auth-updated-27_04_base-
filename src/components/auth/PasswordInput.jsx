@@ -2,18 +2,26 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
-export default function PasswordInput({ register, name = 'password', placeholder = 'Password', error }) {
+export default function PasswordInput({
+  register,
+  value,
+  onChange,
+  placeholder = 'Password',
+  error,
+  autoComplete = 'current-password',
+}) {
   const [show, setShow] = useState(false);
+  const inputProps = register ? { ...register } : { value, onChange };
 
   return (
     <div>
       <div className="relative">
         <input
-          {...register}
+          {...inputProps}
           type={show ? 'text' : 'password'}
           placeholder={placeholder}
+          autoComplete={autoComplete}
           className={`input-base pr-10 ${error ? 'error' : ''}`}
-          autoComplete="current-password"
         />
         <button
           type="button"

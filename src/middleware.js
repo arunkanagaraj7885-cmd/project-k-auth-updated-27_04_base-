@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
 
 // Public paths — no auth required
 const PUBLIC_PATHS = [
@@ -25,22 +24,13 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
+  // Only check cookie presence — the Python backend enforces real auth on every API call.
+  // Verifying the JWT here with a frontend secret would always fail if the backend
+  // uses a different signing key, causing a redirect loop on every protected route.
   const token = req.cookies.get('access_token')?.value;
 
   if (!token) {
     return NextResponse.redirect(new URL('/auth/login', req.url));
-  }
-
-  // Validate JWT
-  try {
-    await jwtVerify(
-      token,
-      new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret-change-me')
-    );
-  } catch {
-    const res = NextResponse.redirect(new URL('/auth/login', req.url));
-    res.cookies.delete('access_token');
-    return res;
   }
 
   // ── Onboarding guard ────────────────────────────────────────────────────────

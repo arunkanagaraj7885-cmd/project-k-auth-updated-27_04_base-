@@ -55,8 +55,14 @@ export default function ProfileSetupPage() {
   const user               = useAppSelector(selectUser);
   const onboardingComplete = useAppSelector(selectOnboardingComplete);
 
-  // Name + photo are permanently locked once the profile has been submitted
-  const isLocked = onboardingComplete;
+  // Fields are editable only during first-time onboarding (pk_onb === 'profile').
+  // After the profile is submitted (pk_onb === 'done') or for returning users, they are locked.
+  const [isLocked, setIsLocked] = useState(true);
+  useEffect(() => {
+    const onbCookie = document.cookie.split('; ').find((c) => c.startsWith('pk_onb='))?.split('=')[1];
+    // Editable only when actively in the onboarding profile step
+    setIsLocked(onbCookie !== 'profile' && onboardingComplete);
+  }, [onboardingComplete]);
 
   // Restore persisted name / avatar from sessionStorage (survives hard reload)
   const [savedUser,   setSavedUser]   = useState(null);

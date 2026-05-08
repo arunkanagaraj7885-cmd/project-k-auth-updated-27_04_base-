@@ -5,7 +5,6 @@ import { paymentsApi } from '@/lib/api/payments';
 import toast from 'react-hot-toast';
 
 const PLAN_INFO = {
-  free:     { label: 'Try Yourself',  price: 0,   description: 'One-time free access' },
   standard: { label: 'Standard Plan', price: 499, description: 'Monthly subscription for students' },
   premium:  { label: 'Premium Plan',  price: 899, description: 'Monthly subscription for students' },
 };
@@ -16,7 +15,7 @@ export default function OrderSummary({ selectedPlan, onProceed, loading }) {
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [couponApplied, setCouponApplied] = useState(false);
 
-  const info = PLAN_INFO[selectedPlan] || PLAN_INFO.free;
+  const info = PLAN_INFO[selectedPlan] || PLAN_INFO.standard;
   const total = Math.max(0, info.price - discount);
 
   const handleApplyCoupon = async () => {
@@ -38,7 +37,7 @@ export default function OrderSummary({ selectedPlan, onProceed, loading }) {
   };
 
   return (
-    <div className="card p-6 sticky top-24">
+    <div className="card p-6 flex flex-col h-full">
       <h3 className="font-semibold text-slate-800 mb-4">Order summary</h3>
 
       {/* Selected plan */}
@@ -49,50 +48,46 @@ export default function OrderSummary({ selectedPlan, onProceed, loading }) {
       </div>
 
       {/* Coupon */}
-      {selectedPlan !== 'free' && (
-        <div className="mb-5">
-          <label className="block text-xs font-medium text-slate-600 mb-2">Coupon code</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={coupon}
-              onChange={(e) => { setCoupon(e.target.value.toUpperCase()); setCouponApplied(false); setDiscount(0); }}
-              placeholder="Enter coupon"
-              className="input-base flex-1 text-sm"
-              disabled={couponApplied}
-            />
-            <button
-              onClick={handleApplyCoupon}
-              disabled={validatingCoupon || couponApplied || !coupon}
-              className="btn-secondary flex-shrink-0"
-              style={{ width: 'auto', padding: '8px 16px', fontSize: 13 }}
-            >
-              {validatingCoupon ? <span className="spinner spinner-brand" style={{ width: 16, height: 16 }} /> : 'Apply'}
-            </button>
-          </div>
+      <div className="mb-5">
+        <label className="block text-xs font-medium text-slate-600 mb-2">Coupon code</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={coupon}
+            onChange={(e) => { setCoupon(e.target.value.toUpperCase()); setCouponApplied(false); setDiscount(0); }}
+            placeholder="Enter coupon"
+            className="input-base flex-1 text-sm"
+            disabled={couponApplied}
+          />
+          <button
+            onClick={handleApplyCoupon}
+            disabled={validatingCoupon || couponApplied || !coupon}
+            className="btn-secondary flex-shrink-0"
+            style={{ width: 'auto', padding: '8px 16px', fontSize: 13 }}
+          >
+            {validatingCoupon ? <span className="spinner spinner-brand" style={{ width: 16, height: 16 }} /> : 'Apply'}
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Price breakdown */}
-      {selectedPlan !== 'free' && (
-        <div className="space-y-2 mb-5 text-sm">
-          <div className="flex justify-between text-slate-600">
-            <span>Plan amount</span>
-            <span>₹{info.price}</span>
-          </div>
-          {discount > 0 && (
-            <div className="flex justify-between text-green-600">
-              <span>Student discount</span>
-              <span>-₹{discount}</span>
-            </div>
-          )}
-          <div className="h-px bg-slate-200 my-2" />
-          <div className="flex justify-between font-bold text-slate-800 text-base">
-            <span>Total payable</span>
-            <span>₹{total}</span>
-          </div>
+      <div className="mt-auto space-y-2 mb-5 text-sm">
+        <div className="flex justify-between text-slate-600">
+          <span>Plan amount</span>
+          <span>₹{info.price}</span>
         </div>
-      )}
+        {discount > 0 && (
+          <div className="flex justify-between text-green-600">
+            <span>Student discount</span>
+            <span>-₹{discount}</span>
+          </div>
+        )}
+        <div className="h-px bg-slate-200 my-2" />
+        <div className="flex justify-between font-bold text-slate-800 text-base">
+          <span>Total payable</span>
+          <span>₹{total}</span>
+        </div>
+      </div>
 
       {/* CTA */}
       <button
@@ -100,27 +95,13 @@ export default function OrderSummary({ selectedPlan, onProceed, loading }) {
         disabled={loading}
         className="btn-primary"
       >
-        {loading ? (
-          <span className="spinner" />
-        ) : selectedPlan === 'free' ? (
-          'Try for Free'
-        ) : (
-          'Proceed to Pay'
-        )}
+        {loading ? <span className="spinner" /> : 'Proceed to Pay'}
       </button>
 
-      {selectedPlan !== 'free' && (
-        <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-400">
-          <Shield size={12} />
-          <span>Secure checkout. Monthly billing. Cancel anytime.</span>
-        </div>
-      )}
-
-      {/* Note */}
-      <p className="text-xs text-slate-400 mt-4 leading-relaxed">
-        The Try Yourself option lets users experience the platform before paying. For Standard users,
-        premium report sections can stay blurred with locked prompts to increase upgrade conversion.
-      </p>
+      <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-400">
+        <Shield size={12} />
+        <span>Secure checkout. Monthly billing. Cancel anytime.</span>
+      </div>
     </div>
   );
 }

@@ -18,12 +18,12 @@ export const authApi = {
     password: data.password,
     confirm_password: data.confirmPassword,
     phone_number: data.phoneNumber,
+    email_verified: true,
     user_type: 'individual',
-    // tenant_id: process.env.NEXT_PUBLIC_TENANT_ID || '3fa85f64-5717-4562-b3fc-2c963f66afa6',
   }),
 
   logout:         ()                => api.post('/auth/logout'),
-  refresh:        ()                => api.post('/auth/refresh-token'),
+  refresh: (refreshToken)           => api.post('/auth/refresh-token', { refresh_token: refreshToken }),
 
   // Backend expects { email }
   sendOtp: (email)           => api.post('/auth/send-otp', { email }),
