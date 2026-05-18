@@ -117,10 +117,10 @@ function downloadExcel(questions) {
 }
 
 export default function QuestionFeedbackTable({ questions = [], plan = 'free' }) {
-  const allQuestions      = questions.length > 0 ? questions : FALLBACK_QUESTIONS;
-  const isPremium         = plan === 'premium';
-  const isStandardOrAbove = plan === 'standard' || plan === 'premium';
-  const sourceQuestions   = isStandardOrAbove ? allQuestions : [allQuestions[0]];
+  const allQuestions = questions.length > 0 ? questions : FALLBACK_QUESTIONS;
+  const isPremium    = plan === 'premium';
+  const isStandard   = plan === 'standard';
+  const sourceQuestions = isPremium ? allQuestions : [allQuestions[0]];
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading]           = useState(false);
@@ -143,7 +143,7 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
   // IntersectionObserver watching the sentinel inside the scrollable card
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel || !isStandardOrAbove) return;
+    if (!sentinel || !isPremium) return;
 
     const observer = new IntersectionObserver(
       (entries) => { if (entries[0].isIntersecting) loadMore(); },
@@ -151,7 +151,7 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [loadMore, isStandardOrAbove]);
+  }, [loadMore, isPremium]);
 
   return (
     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
@@ -160,16 +160,16 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
       <div className="p-6 border-b border-slate-100 flex items-center justify-between">
         <div>
           <h3 className="font-bold text-slate-800">Question-by-Question Feedback</h3>
-          {isStandardOrAbove && (
+          {isPremium && (
             <p className="text-[11px] text-slate-400 mt-0.5">
               Showing {displayQuestions.length} of {sourceQuestions.length} questions
             </p>
           )}
         </div>
         <div className="flex items-center gap-3">
-          {!isStandardOrAbove && (
+          {!isPremium && (
             <span className="text-[11px] text-slate-400 uppercase font-bold tracking-wider">
-              Preview available in standard plan
+              {isStandard ? 'Upgrade to Premium to unlock all questions' : 'Preview available in standard plan'}
             </span>
           )}
           {isPremium && (
@@ -187,7 +187,7 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
       {/* ── Scrollable table area ── */}
       <div
         ref={scrollRef}
-        className={isStandardOrAbove ? 'overflow-y-auto max-h-[560px]' : ''}
+        className={isPremium ? 'overflow-y-auto max-h-[560px]' : ''}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -217,9 +217,6 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
                     {q.feedback || '—'}
                   </td>
 
-                  {/* Ideal Improvement — blurred for non-premium */}
-                  
-
                   <td className="px-6 py-6 align-top text-center">
                     <span
                       className="inline-flex items-center justify-center w-12 py-1.5 rounded-full text-[10px] font-bold"
@@ -234,8 +231,8 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
                 </tr>
               ))}
 
-              {/* ── Blurred teaser rows for free plan ── */}
-              {!isStandardOrAbove && (
+              {/* ── Blurred teaser rows for free and standard plans ── */}
+              {!isPremium && (
                 <>
                   <tr className="blur-[4px] select-none pointer-events-none border-b border-slate-50">
                     <td className="px-6 py-8"><div className="h-4 w-24 bg-slate-200 rounded mb-2" /><div className="h-3 w-32 bg-slate-100 rounded" /></td>
@@ -256,7 +253,7 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
         </div>
 
         {/* ── Infinite scroll sentinel + loader ── */}
-        {isStandardOrAbove && (
+        {isPremium && (
           <div ref={sentinelRef} className="py-4 flex items-center justify-center">
             {loading && (
               <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -272,8 +269,31 @@ export default function QuestionFeedbackTable({ questions = [], plan = 'free' })
       </div>
       {/* ── END scrollable area ── */}
 
-      {/* ── Upgrade banner ── */}
-      {!isStandardOrAbove && (
+      {/* ── Compact upgrade nudge for Standard plan ── */}
+      {isStandard && (
+        <div className="px-6 pb-5 pt-1">
+          <div className="flex items-center justify-between gap-4 bg-indigo-50 border border-indigo-100 rounded-2xl px-5 py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+                <Zap size={14} className="text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-[12px] font-bold text-indigo-900 leading-tight">Unlock Ideal Answers with Premium</p>
+                <p className="text-[11px] text-indigo-400 mt-0.5">See exactly what a perfect answer looks like for every question.</p>
+              </div>
+            </div>
+            <Link
+              href="/main/upgrade"
+              className="shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[11px] font-bold hover:bg-indigo-700 transition-all whitespace-nowrap"
+            >
+              Upgrade →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* ── Upgrade banner (free plan only) ── */}
+      {!isPremium && !isStandard && (
         <div className="px-6 pb-6">
           <div className="h-16 bg-gradient-to-t from-white to-transparent -mt-16 mb-0 pointer-events-none relative z-10" />
 

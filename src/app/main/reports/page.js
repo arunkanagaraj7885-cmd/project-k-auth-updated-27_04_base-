@@ -50,6 +50,15 @@ export default function ReportsPage() {
     setApplied({ search: searchInput, type: typeInput, scoreRange: scoreInput, dateRange: dateInput });
   };
 
+  const handleClear = () => {
+    setSearchInput('');
+    setTypeInput('');
+    setScoreInput('');
+    setDateInput('');
+    setPage(1);
+    setApplied({ search: '', type: '', scoreRange: '', dateRange: '' });
+  };
+
   const handleKeyDown = (e) => { if (e.key === 'Enter') handleApply(); };
 
   const firstName = user?.name?.split(' ')[0] || user?.first_name || 'there';
@@ -69,25 +78,26 @@ export default function ReportsPage() {
       </div>
 
       {/* ── Filter bar ── */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-5 flex flex-wrap gap-3 items-end">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-5 flex items-end gap-3">
         {/* Search */}
-        <div className="flex-1 min-w-48">
+        <div className="flex-1">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Search</p>
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Search by title"
-              className="input-base pl-8 text-sm"
+              className="input-base text-sm w-full"
+              style={{ paddingLeft: '2.25rem' }}
             />
           </div>
         </div>
 
         {/* Interview Type */}
-        <div className="min-w-40">
+        <div className="flex-1">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Interview Type</p>
           <select
             value={typeInput}
@@ -101,7 +111,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Score Range */}
-        <div className="min-w-40">
+        <div className="flex-1">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Score Range</p>
           <select
             value={scoreInput}
@@ -109,16 +119,13 @@ export default function ReportsPage() {
             className="input-base text-sm bg-white"
           >
             <option value="">All Scores</option>
-            <option value="90-100">90 – 100</option>
-            <option value="80-89">80 – 89</option>
-            <option value="70-79">70 – 79</option>
-            <option value="60-69">60 – 69</option>
-            <option value="below60">Below 60</option>
+            <option value="80-100">80 – 100</option>
+            <option value="50-80">50 – 80</option>
           </select>
         </div>
 
         {/* Date */}
-        <div className="min-w-40">
+        <div className="flex-1">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Date</p>
           <select
             value={dateInput}
@@ -126,20 +133,28 @@ export default function ReportsPage() {
             className="input-base text-sm bg-white"
           >
             <option value="">All Dates</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 3 months</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
           </select>
         </div>
 
-        {/* Apply */}
-        <button
-          onClick={handleApply}
-          className="btn-primary flex-shrink-0"
-          style={{ width: 'auto', padding: '10px 24px' }}
-        >
-          Apply
-        </button>
+        {/* Actions */}
+        <div className="flex items-end gap-2 shrink-0">
+          <button
+            onClick={handleClear}
+            className="px-5 py-[10px] rounded-lg border border-red-200 text-sm font-medium text-red-500 bg-white hover:bg-red-50 transition-colors"
+          >
+            Clear
+          </button>
+          <button
+            onClick={handleApply}
+            className="btn-primary"
+            style={{ width: 'auto', padding: '10px 24px' }}
+          >
+            Apply
+          </button>
+        </div>
       </div>
 
       {/* ── Stats + Table card ── */}
@@ -187,7 +202,7 @@ export default function ReportsPage() {
           <div className="py-16 text-center">
             <p className="text-slate-500 text-sm">No reports match your filters.</p>
             <button
-              onClick={() => { setSearchInput(''); setTypeInput(''); setScoreInput(''); setDateInput(''); setApplied({ search: '', type: '', scoreRange: '', dateRange: '' }); setPage(1); }}
+              onClick={handleClear}
               className="text-blue-600 text-sm hover:underline mt-2 inline-block"
             >
               Clear filters
@@ -196,34 +211,34 @@ export default function ReportsPage() {
         ) : (
           reports.map((r, i) => (
             <div
-              key={r.id}
-              onClick={() => router.push(`/main/reports/${r.id}`)}
+              key={r.session_id}
+              onClick={() => router.push(`/main/reports/${r.session_id}`)}
               className={`grid grid-cols-[1fr_160px_90px_140px_40px] gap-4 px-5 py-4 items-center cursor-pointer hover:bg-blue-50/40 transition-colors ${
                 i < reports.length - 1 ? 'border-b border-slate-100' : ''
               }`}
             >
-              <span className="text-sm font-medium text-slate-800 truncate">{r.role}</span>
+              <span className="text-sm font-medium text-slate-800 truncate">{r.title}</span>
               <span className="text-sm text-slate-500">
-                {r.mode === 'full' ? 'Full Interview' : 'Mock Interview'}
+                {r.interview_type === 'full' ? 'Full Interview' : 'Mock Interview'}
               </span>
               <span><ScoreBadge score={r.score} /></span>
-              <span className="text-sm text-slate-500">{formatDate(r.completedAt)}</span>
+              <span className="text-sm text-slate-500">{formatDate(r.completed_date)}</span>
               <ChevronRight size={16} className="text-slate-300" />
             </div>
           ))
         )}
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50">
-            <span className="text-xs text-slate-500">
+        {totalCount > 0 && (
+          <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100">
+            <span className="text-sm text-slate-500">
               Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalCount)} of {totalCount}
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 Previous
               </button>
@@ -231,10 +246,10 @@ export default function ReportsPage() {
                 <button
                   key={i}
                   onClick={() => setPage(i + 1)}
-                  className={`w-8 h-8 text-xs rounded-lg border transition-colors ${
+                  className={`w-9 h-9 text-sm rounded-lg border font-medium transition-colors ${
                     page === i + 1
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   {i + 1}
@@ -243,7 +258,7 @@ export default function ReportsPage() {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 Next
               </button>
