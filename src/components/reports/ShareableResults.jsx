@@ -1,11 +1,50 @@
 'use client';
 import { useState } from 'react';
 import { pdf } from '@react-pdf/renderer';
-import { useScoreCard } from '@/hooks/useReport';
 import ScoreCardPDF from './ScoreCardPDF';
 
-export default function ShareableResults({ reportId, score }) {
-  const { data: card } = useScoreCard(reportId);
+function toLabel(key) {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function buildCard(report, userName) {
+  const s         = report?.overall_score ?? 0;
+  const breakdown = report?.score_breakdown ?? {};
+
+  const readiness_label =
+    s >= 85 ? 'Excellent Interview Readiness' :
+    s >= 75 ? 'Strong Interview Readiness'    :
+    s >= 65 ? 'Good Interview Readiness'      : 'Developing Interview Readiness';
+
+  const recommendation       = s >= 80 ? 'Shortlist' : s >= 70 ? 'Consider' : 'Review';
+  const recommendation_label = s >= 80 ? 'Good fit for next round' : s >= 70 ? 'Needs one more round' : 'Below threshold';
+
+  return {
+    candidate_name: userName || 'Candidate',
+    role:           report?.summary_title ?? 'Interview',
+    score:          s,
+    readiness_label,
+    readiness_desc: report?.score_summary ?? '',
+    snapshot: {
+      communication:        parseFloat(((breakdown.communication ?? 0) / 10).toFixed(1)),
+      communication_label:  'Interview communication',
+      confidence:           parseFloat(((breakdown.confidence ?? 0) / 10).toFixed(1)),
+      confidence_label:     'Interview confidence',
+      recommendation,
+      recommendation_label,
+    },
+    core_scores: Object.entries(breakdown).map(([key, val]) => ({
+      label: toLabel(key),
+      value: parseFloat((val / 10).toFixed(1)),
+    })),
+    key_summary: (report?.key_insights ?? []).map((i) => ({
+      type: i.type === 'positive' ? 'positive' : 'improvement',
+      text: i.description,
+    })),
+  };
+}
+
+export default function ShareableResults({ report, userName, reportId, score }) {
   const [downloading, setDownloading] = useState(false);
 
   const scoreCardUrl = typeof window !== 'undefined'
@@ -13,9 +52,10 @@ export default function ShareableResults({ reportId, score }) {
     : '';
 
   const handleDownload = async () => {
-    if (!card) return;
+    if (!report) return;
     setDownloading(true);
     try {
+      const card = buildCard(report, userName);
       const blob = await pdf(<ScoreCardPDF card={card} />).toBlob();
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
@@ -56,7 +96,7 @@ export default function ShareableResults({ reportId, score }) {
       <div className="space-y-2">
         <button
           onClick={handleDownload}
-          disabled={!card || downloading}
+          disabled={!report || downloading}
           className="w-full py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {downloading ? (

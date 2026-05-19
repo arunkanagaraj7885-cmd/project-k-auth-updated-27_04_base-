@@ -55,12 +55,12 @@ export default function UpgradePage() {
       dispatch(updatePlan(plan));
 
       // Persist plan — update both keys so layout rehydrate always reads the latest
-      sessionStorage.setItem('demo_plan', plan);
-      const savedRaw = sessionStorage.getItem('demo_user');
+      sessionStorage.setItem('pk_plan', plan);
+      const savedRaw = sessionStorage.getItem('pk_user');
       if (savedRaw) {
         try {
           const savedUser = JSON.parse(savedRaw);
-          sessionStorage.setItem('demo_user', JSON.stringify({ ...savedUser, plan }));
+          sessionStorage.setItem('pk_user', JSON.stringify({ ...savedUser, plan }));
         } catch { /* ignore */ }
       }
 

@@ -1,21 +1,14 @@
 'use client';
 import { ArrowRight } from 'lucide-react';
 
-export default function NextPractice() {
-  const practices = [
-    {
-      title: 'HR Round Practice',
-      description: 'Improve self-introduction, confidence, and concise storytelling.',
-    },
-    {
-      title: 'Behavioral Round',
-      description: 'Practice structured answers using real workplace situations.',
-    },
-    {
-      title: 'Frontend Developer - Full Interview',
-      description: 'Take a longer round to improve follow-up handling and answer depth.',
-    },
-  ];
+const FALLBACK = [
+  { title: 'HR Round Practice',              description: 'Improve self-introduction, confidence, and concise storytelling.' },
+  { title: 'Behavioral Round',               description: 'Practice structured answers using real workplace situations.' },
+  { title: 'Frontend Developer - Full Interview', description: 'Take a longer round to improve follow-up handling and answer depth.' },
+];
+
+export default function NextPractice({ practices = [] }) {
+  const items = practices.length > 0 ? practices : FALLBACK;
 
   return (
     <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
@@ -25,7 +18,7 @@ export default function NextPractice() {
       </div>
       
       <div className="space-y-4">
-        {practices.map((p, i) => (
+        {items.map((p, i) => (
           <div 
             key={i} 
             className="group p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all cursor-pointer flex items-center justify-between"

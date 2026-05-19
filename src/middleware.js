@@ -24,12 +24,15 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // Only check cookie presence — the Python backend enforces real auth on every API call.
-  // Verifying the JWT here with a frontend secret would always fail if the backend
-  // uses a different signing key, causing a redirect loop on every protected route.
-  const token = req.cookies.get('access_token')?.value;
+  // Check the frontend session flag — not the actual JWT.
+  // access_token and refresh_token are httpOnly cookies on the backend domain and are
+  // invisible to this middleware. pk_session is a non-sensitive flag set on the frontend
+  // domain after login. The backend enforces real auth on every API call; if the
+  // access_token is expired the axios interceptor silently refreshes it before any
+  // 401 reaches the user.
+  const session = req.cookies.get('pk_session')?.value;
 
-  if (!token) {
+  if (!session) {
     return NextResponse.redirect(new URL('/auth/login', req.url));
   }
 

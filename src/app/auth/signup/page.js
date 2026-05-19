@@ -9,7 +9,7 @@ import PasswordInput from '@/components/auth/PasswordInput';
 import { authApi } from '@/lib/api/auth';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/slices/authSlice';
-import { saveTokens } from '@/lib/tokens';
+import { setSessionCookie } from '@/lib/tokens';
 
 const OTP_SECONDS = 60;
 
@@ -180,7 +180,7 @@ export default function SignupPage() {
       const res = await authApi.register({ firstName, lastName, email, password, confirmPassword, phoneNumber: fullPhone });
       const payload = res.data;
 
-      if (payload.access_token) saveTokens(payload.access_token, payload.refresh_token);
+      // Backend sets access_token + refresh_token as httpOnly cookies automatically
 
       const userPlan = payload.user?.plan || 'free';
       const userObj  = {
@@ -192,8 +192,9 @@ export default function SignupPage() {
         avatar_url: payload.user?.avatar_url || null,
         plan:       userPlan,
       };
-      sessionStorage.setItem('demo_user', JSON.stringify(userObj));
-      sessionStorage.setItem('demo_plan', userPlan);
+      setSessionCookie();
+      sessionStorage.setItem('pk_user', JSON.stringify(userObj));
+      sessionStorage.setItem('pk_plan', userPlan);
       dispatch(setCredentials({ user: userObj, plan: userPlan, onboarding_complete: false, plan_selected: false }));
       setOnbCookie('plan');
       toast.success('Account created! Now choose your plan.');

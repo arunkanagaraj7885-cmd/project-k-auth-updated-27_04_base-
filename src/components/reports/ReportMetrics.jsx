@@ -1,13 +1,25 @@
 'use client';
 import { TrendingUp, Award, AlertCircle, ArrowRight } from 'lucide-react';
 
-export default function ReportMetrics({ readiness = 78, bestArea = 'Technical', needsAttention = 'Confidence', recommendedNext = 'HR Round' }) {
+export default function ReportMetrics({
+  readiness = 0,
+  readinessChange = null,
+  bestArea = '—',
+  bestAreaScore = null,
+  needsAttention = '—',
+  needsAttentionScore = null,
+  recommendedNext = null,
+}) {
+  const readinessSubtext = readinessChange != null
+    ? `${readinessChange > 0 ? '↑' : '↓'} ${Math.abs(readinessChange)}% from previous attempt`
+    : 'First attempt — keep practising!';
+
   const metrics = [
     {
       label: 'Interview Readiness',
       value: `${readiness}%`,
-      subtext: '↑ 6% from previous attempt',
-      subtextColor: 'text-emerald-500',
+      subtext: readinessSubtext,
+      subtextColor: readinessChange > 0 ? 'text-emerald-500' : 'text-slate-400',
       icon: TrendingUp,
       iconColor: 'text-emerald-500',
       bgColor: 'bg-emerald-50',
@@ -15,7 +27,7 @@ export default function ReportMetrics({ readiness = 78, bestArea = 'Technical', 
     {
       label: 'Best Area',
       value: bestArea,
-      subtext: '84/100 score',
+      subtext: bestAreaScore != null ? `${bestAreaScore}/100 score` : '—',
       subtextColor: 'text-blue-500',
       icon: Award,
       iconColor: 'text-blue-500',
@@ -24,7 +36,7 @@ export default function ReportMetrics({ readiness = 78, bestArea = 'Technical', 
     {
       label: 'Needs Attention',
       value: needsAttention,
-      subtext: '61/100 score',
+      subtext: needsAttentionScore != null ? `${needsAttentionScore}/100 score` : '—',
       subtextColor: 'text-orange-500',
       icon: AlertCircle,
       iconColor: 'text-orange-500',
@@ -32,8 +44,8 @@ export default function ReportMetrics({ readiness = 78, bestArea = 'Technical', 
     },
     {
       label: 'Recommended Next',
-      value: recommendedNext,
-      subtext: 'Build clarity and self-presentation',
+      value: recommendedNext ?? 'Practice More',
+      subtext: 'Based on your performance',
       subtextColor: 'text-indigo-500',
       icon: ArrowRight,
       iconColor: 'text-indigo-500',

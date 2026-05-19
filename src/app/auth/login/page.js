@@ -12,8 +12,7 @@ import { loginSchema } from '@/lib/validations';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/slices/authSlice';
 import { authApi } from '@/lib/api/auth';
-import { userApi } from '@/lib/api/user';
-import { saveTokens } from '@/lib/tokens';
+import { setSessionCookie } from '@/lib/tokens';
 
 function setOnbCookie(val) {
   document.cookie = `pk_onb=${val}; path=/; max-age=86400; SameSite=Lax`;
@@ -33,19 +32,11 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      // Step 1: Authenticate — backend returns tokens in response body
-      const loginRes = await authApi.login({ email: data.email, password: data.password });
-      const { access_token, refresh_token } = loginRes.data;
+      // Backend sets access_token + refresh_token as httpOnly cookies.
+      // Login response body contains the user object directly — no separate /auth/me call needed.
+      const { user: u } = (await authApi.login({ email: data.email, password: data.password })).data;
 
-      // Step 2: Persist tokens — axios request interceptor picks them up automatically
-      saveTokens(access_token, refresh_token);
-
-      // Step 3: Fetch profile — /auth/me returns a flat user object directly
-      const meRes = await userApi.getMe();
-      const u     = meRes.data;               // { id, first_name, last_name, email, ... }
-
-      // Use plan from backend → login response → previously stored selection → default
-      const plan = loginRes.data.plan || u.plan || sessionStorage.getItem('demo_plan') || 'free';
+      const plan = u.plan || sessionStorage.getItem('pk_plan') || 'free';
 
       const userObj = {
         id:         u.id         || null,
@@ -57,14 +48,14 @@ export default function LoginPage() {
         plan,
       };
 
-      // Fallback cache used by main layout when backend is temporarily unreachable
-      sessionStorage.setItem('demo_user', JSON.stringify(userObj));
-      sessionStorage.setItem('demo_plan', plan);
+      setSessionCookie();
+      sessionStorage.setItem('pk_user', JSON.stringify(userObj));
+      sessionStorage.setItem('pk_plan', plan);
 
       dispatch(setCredentials({
         user:                userObj,
         plan,
-        onboarding_complete: true,  // existing user — layout will gate if onboarding is incomplete
+        onboarding_complete: true,
         plan_selected:       true,
       }));
 

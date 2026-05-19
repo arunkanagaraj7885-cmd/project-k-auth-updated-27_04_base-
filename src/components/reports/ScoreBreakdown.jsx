@@ -1,15 +1,33 @@
 'use client';
 
-export default function ScoreBreakdown({ categories = [] }) {
-  // Use provided categories or default Figma items
-  const items = categories.length > 0 ? categories : [
-    { label: 'Technical Knowledge', score: 84, color: 'bg-blue-500' },
-    { label: 'Communication', score: 73, color: 'bg-emerald-500' },
-    { label: 'Confidence', score: 61, color: 'bg-orange-400' },
-    { label: 'Answer Structure', score: 69, color: 'bg-purple-500' },
-    { label: 'Problem Solving', score: 71, color: 'bg-blue-400' },
-    { label: 'Behavioral Readiness', score: 66, color: 'bg-emerald-400' },
-  ];
+const COLOR_MAP = {
+  technical_knowledge:  'bg-blue-500',
+  communication:        'bg-emerald-500',
+  confidence:           'bg-orange-400',
+  answer_structure:     'bg-purple-500',
+  problem_solving:      'bg-blue-400',
+  behavioral_readiness: 'bg-emerald-400',
+};
+
+function toLabel(key) {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export default function ScoreBreakdown({ scoreBreakdown = null }) {
+  const items = scoreBreakdown
+    ? Object.entries(scoreBreakdown).map(([key, value]) => ({
+        label: toLabel(key),
+        score: value,
+        color: COLOR_MAP[key] ?? 'bg-slate-400',
+      }))
+    : [
+        { label: 'Technical Knowledge', score: 84, color: 'bg-blue-500' },
+        { label: 'Communication',       score: 73, color: 'bg-emerald-500' },
+        { label: 'Confidence',          score: 61, color: 'bg-orange-400' },
+        { label: 'Answer Structure',    score: 69, color: 'bg-purple-500' },
+        { label: 'Problem Solving',     score: 71, color: 'bg-blue-400' },
+        { label: 'Behavioral Readiness', score: 66, color: 'bg-emerald-400' },
+      ];
 
   return (
     <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">

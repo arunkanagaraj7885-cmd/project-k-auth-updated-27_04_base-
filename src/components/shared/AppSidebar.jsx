@@ -17,6 +17,7 @@ import { resetSession } from '@/store/slices/interviewSlice';
 import { selectSidebarOpen, toggleSidebar } from '@/store/slices/uiSlice';
 import { queryClient } from '@/lib/queryClient';
 import api from '@/lib/axios';
+import { clearTokens } from '@/lib/tokens';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -60,12 +61,11 @@ export default function AppSidebar() {
 
   const handleLogout = async () => {
     setMenuOpen(false);
-    try { await api.post('/auth/logout'); } catch { /* ignore */ }
+    try { await api.post('/auth/logout'); } catch { /* ignore — proceed with local cleanup regardless */ }
+    clearTokens();
     dispatch(clearCredentials());
     dispatch(resetSession());
     queryClient.clear();
-    // Clear onboarding cookie
-    document.cookie = 'pk_onb=; path=/; max-age=0';
     router.push('/auth/login');
     toast.success('Logged out successfully');
   };
@@ -78,26 +78,26 @@ export default function AppSidebar() {
 
   return (
     <aside
-      className="sidebar transition-all duration-300 bg-white border-r border-[#e3e7ee]"
+      className="sidebar transition-all duration-300 bg-white border-r border-[#e3e7ee] flex-shrink-0 relative"
       style={{ width: sidebarOpen ? 260 : 72 }}
     >
       {/* ── Logo + collapse toggle ── */}
-      <div className="flex items-center justify-between px-4 py-5 border-b border-[#e3e7ee]">
+      <div className={`flex items-center border-b border-[#e3e7ee] px-4 py-5 ${sidebarOpen ? 'justify-between' : 'justify-center'}`}>
         {sidebarOpen && (
-          <div className="pl-1">
+          <div className="pl-1 min-w-0">
             <Logo size="sm" />
           </div>
         )}
         <button
           onClick={() => dispatch(toggleSidebar())}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors ml-auto"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors flex-shrink-0"
         >
           {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
       </div>
 
       {/* ── Nav items ── */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden" style={{ width: sidebarOpen ? 260 : 72 }}>
         {NAV_ITEMS.map(({ href, icon: Icon, label, plan: reqPlan }) => {
           const active = pathname?.startsWith(href);
           const locked = reqPlan && plan !== reqPlan && plan !== 'premium';
@@ -106,31 +106,40 @@ export default function AppSidebar() {
             <Link
               key={href}
               href={locked ? '/pricing' : href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${
+              className={`flex items-center py-2.5 rounded-lg text-sm font-medium transition-colors group whitespace-nowrap ${
+                sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'
+              } ${
                 active
-                  ? 'text-[#0b66d6] bg-transparent'
-                  : 'text-[#7b7f8c] hover:text-[#2b3240] bg-transparent'
+                  ? 'text-[#0b66d6]'
+                  : 'text-[#7b7f8c] hover:text-[#2b3240]'
               }`}
               title={!sidebarOpen ? label : undefined}
             >
               <Icon size={18} className="flex-shrink-0" />
-              <span className={`flex-1 truncate ${sidebarOpen ? '' : 'hidden'}`}>{label}</span>
-              <span className={`text-xs px-1.5 py-0.5 rounded text-[#7b7f8c] ${sidebarOpen && locked ? '' : 'hidden'}`}>
-                Pro
-              </span>
+              {sidebarOpen && (
+                <>
+                  <span className="flex-1 truncate">{label}</span>
+                  {locked && (
+                    <span className="text-xs px-1.5 py-0.5 rounded text-[#7b7f8c]">Pro</span>
+                  )}
+                </>
+              )}
             </Link>
           );
         })}
       </nav>
 
       {/* ── User section (bottom) ── */}
-      <div className="relative border-t border-[#e3e7ee] px-3 py-3" ref={menuRef}>
+      <div className="relative border-t border-[#e3e7ee] px-3 py-3 overflow-visible" ref={menuRef}>
 
         {/* Pop-up menu — rendered above the trigger */}
         {menuOpen && (
           <div
-            className="absolute left-3 right-3 bottom-full mb-2 rounded-2xl border border-[#1e3a67] bg-white shadow-sm overflow-hidden z-50"
-            style={{ width: sidebarOpen ? 236 : 208, left: sidebarOpen ? 12 : undefined, right: sidebarOpen ? 12 : 'auto' }}
+            className="absolute bottom-full mb-2 rounded-2xl border border-[#1e3a67] bg-white shadow-lg overflow-hidden z-50"
+            style={sidebarOpen
+              ? { left: 12, right: 12, width: 236 }
+              : { left: 0, width: 224 }
+            }
           >
             {/* Menu header */}
             {sidebarOpen && (

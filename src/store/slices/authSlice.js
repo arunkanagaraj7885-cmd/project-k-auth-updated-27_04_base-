@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-// NOTE: Only non-sensitive metadata stored in Redux.
-// JWT tokens live exclusively in httpOnly cookies — never in JS.
+// NOTE: Only non-sensitive metadata (user object, plan, flags) stored in Redux.
+// JWT tokens are stored in SameSite=Strict cookies managed by src/lib/tokens.js.
 const initialState = {
   user: null,       // { id, name, email, first_name, last_name, avatar_url }
   plan: 'free',     // 'free' | 'standard' | 'premium'

@@ -1,28 +1,22 @@
-const AK = 'pk_access';
-const RK = 'pk_refresh';
-
-export function saveTokens(accessToken, refreshToken) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(AK, accessToken);
-  if (refreshToken) localStorage.setItem(RK, refreshToken);
-  // Readable (non-httpOnly) cookie so Next.js middleware can gate protected routes
-  document.cookie = `access_token=${accessToken}; path=/; max-age=86400; SameSite=Lax`;
+function deleteCookie(name) {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
 }
 
-export function getAccessToken() {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(AK);
+// Non-sensitive session flag on the frontend domain.
+// Next.js middleware reads this to know a session exists.
+// It carries no token value — actual auth is enforced by backend httpOnly cookies
+// on every API call. Expires in 30 days to match the refresh_token lifetime.
+export function setSessionCookie() {
+  if (typeof document === 'undefined') return;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `pk_session=1; path=/; max-age=2592000; SameSite=Lax${secure}`;
 }
 
-export function getRefreshToken() {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(RK);
-}
-
+// Clears all frontend-managed cookies on logout.
+// Backend clears httpOnly access_token + refresh_token via Set-Cookie Max-Age=0
+// in the /auth/logout response.
 export function clearTokens() {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(AK);
-  localStorage.removeItem(RK);
-  document.cookie = 'access_token=; path=/; max-age=0';
-  document.cookie = 'pk_onb=; path=/; max-age=0';
+  deleteCookie('pk_session');
+  deleteCookie('pk_onb');
 }

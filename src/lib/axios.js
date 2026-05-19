@@ -1,17 +1,10 @@
 import axios from 'axios';
-import { getAccessToken, getRefreshToken, saveTokens, clearTokens } from './tokens';
+import { clearTokens } from './tokens';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.projectk.io/api/v1',
-  withCredentials: true,
+  withCredentials: true,   // browser auto-sends httpOnly cookies (access_token, refresh_token)
   headers: { 'Content-Type': 'application/json' },
-});
-
-// ── Attach Bearer token to every outgoing request ────────────────────────────
-api.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) config.headers['Authorization'] = `Bearer ${token}`;
-  return config;
 });
 
 // ── Auth endpoints that must never trigger the refresh retry loop ─────────────
@@ -38,14 +31,10 @@ api.interceptors.response.use(
 
       refreshing = true;
       try {
-        const refreshToken = getRefreshToken();
-        if (!refreshToken) throw new Error('no_refresh_token');
-
-        const res = await api.post('/auth/refresh-token', { refresh_token: refreshToken });
-        const { access_token, refresh_token } = res.data;
-
-        saveTokens(access_token, refresh_token || refreshToken);
-        orig.headers['Authorization'] = `Bearer ${access_token}`;
+        // refresh_token is httpOnly — browser sends it automatically via withCredentials.
+        // Backend reads it from the cookie (Path=/api/v1/auth/refresh-token).
+        // No request body needed.
+        await api.post('/auth/refresh-token');
       } catch {
         refreshing = false;
         queue = [];

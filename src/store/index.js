@@ -8,7 +8,7 @@ import uiReducer from './slices/uiSlice';
 function getPreloadedPlan() {
   if (typeof window === 'undefined') return 'free';
   try {
-    return sessionStorage.getItem('demo_plan') || 'free';
+    return sessionStorage.getItem('pk_plan') || 'free';
   } catch {
     return 'free';
   }

@@ -46,7 +46,7 @@ export default function MainLayout({ children }) {
         const res  = await userApi.getMe();
         const u    = res.data;
         // Backend may not return plan — fall back to what the user selected locally
-        const plan = u.plan ?? sessionStorage.getItem('demo_plan') ?? 'free';
+        const plan = u.plan ?? sessionStorage.getItem('pk_plan') ?? 'free';
 
         const userObj = {
           id:         u.id         || null,
@@ -58,8 +58,8 @@ export default function MainLayout({ children }) {
           plan,
         };
 
-        sessionStorage.setItem('demo_user', JSON.stringify(userObj));
-        sessionStorage.setItem('demo_plan', plan);
+        sessionStorage.setItem('pk_user', JSON.stringify(userObj));
+        sessionStorage.setItem('pk_plan', plan);
 
         // Backend may not return onboarding_complete — use pk_onb cookie as source of truth.
         // 'plan' or 'profile' → still in onboarding (false); 'done' or absent → complete (true)
@@ -98,8 +98,8 @@ export default function MainLayout({ children }) {
           .find((c) => c.startsWith('pk_onb='))
           ?.split('=')[1];
 
-        const savedPlan = sessionStorage.getItem('demo_plan') || 'free';
-        const savedRaw  = sessionStorage.getItem('demo_user');
+        const savedPlan = sessionStorage.getItem('pk_plan') || 'free';
+        const savedRaw  = sessionStorage.getItem('pk_user');
         const savedUser = savedRaw ? (() => { try { return JSON.parse(savedRaw); } catch { return null; } })() : null;
 
         // No stored user at all → session is truly gone, send to login

@@ -8,11 +8,10 @@ import NextPractice from '@/components/reports/NextPractice';
 import KeyInsights from '@/components/reports/KeyInsights';
 import ActionPlan from '@/components/reports/ActionPlan';
 import ShareableResults from '@/components/reports/ShareableResults';
-import BlurredSection from '@/components/shared/BlurredSection';
 import { useAppSelector } from '@/store/hooks';
 import { selectPlan, selectUser } from '@/store/slices/authSlice';
 import { useReport } from '@/hooks/useReport';
-import { Lock, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import Link from 'next/link';
 
 function UnlockPremiumOverlay({ features = [] }) {
@@ -91,34 +90,44 @@ export default function ReportDetailPage() {
 
       {/* Hero Section */}
       <ReportHeroBanner
-        score={report?.score}
+        score={report?.overall_score}
+        summaryTitle={report?.summary_title}
         summary={report?.summary}
+        scoreSummary={report?.score_summary}
         plan={plan}
         userName={user?.name?.split(' ')[0]}
       />
 
       {/* Metrics Row */}
-      <ReportMetrics 
-        readiness={report?.readiness}
+      <ReportMetrics
+        readiness={report?.interview_readiness}
+        readinessChange={report?.readiness_change}
         bestArea={report?.best_area}
+        bestAreaScore={report?.best_area_score}
         needsAttention={report?.needs_attention}
-        recommendedNext={report?.recommended_next}
+        needsAttentionScore={report?.needs_attention_score}
+        recommendedNext={report?.recommended_next_practice?.[0]?.title}
       />
 
       {/* Grid: Breakdown & Next Practice */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <div className="lg:col-span-2">
-          <ScoreBreakdown categories={report?.categories ?? []} />
+          <ScoreBreakdown scoreBreakdown={report?.score_breakdown} />
         </div>
         <div className="lg:col-span-1">
-          <NextPractice />
+          <NextPractice practices={report?.recommended_next_practice ?? []} />
         </div>
       </div>
 
       {/* Question Feedback: Table View */}
       <div className="mb-8">
-        <QuestionFeedbackTable 
-          questions={report?.questions ?? []} 
+        <QuestionFeedbackTable
+          questions={(report?.turn_scores ?? []).map((t) => ({
+            question: t.question,
+            answer:   t.answer,
+            feedback: t.ai_feedback,
+            score:    t.score,
+          }))}
           plan={plan}
         />
       </div>
@@ -128,13 +137,18 @@ export default function ReportDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left — Key Insights + Action Plan */}
           <div className="lg:col-span-2 space-y-6">
-            <KeyInsights insights={report?.insights ?? {}} />
+            <KeyInsights insights={report?.key_insights ?? []} />
             <ActionPlan actions={report?.action_plan ?? []} />
           </div>
 
           {/* Right — Shareable Results + Try Again Soon */}
           <div className="lg:col-span-1 space-y-6">
-            <ShareableResults reportId={reportId} score={report?.score} />
+            <ShareableResults
+              report={report}
+              userName={user?.name || user?.first_name}
+              reportId={reportId}
+              score={report?.overall_score}
+            />
 
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">

@@ -1,15 +1,7 @@
 import api from '@/lib/axios';
 
 export const authApi = {
-  // Backend uses OAuth2PasswordRequestForm — must send form-encoded with field 'username'
-  login: (data) => {
-    const form = new URLSearchParams();
-    form.append('username', data.email);
-    form.append('password', data.password);
-    return api.post('/auth/login', form, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
-  },
+  login: (data) => api.post('/auth/login', { email: data.email, password: data.password }),
 
   register: (data) => api.post('/auth/register', {
     first_name: data.firstName,

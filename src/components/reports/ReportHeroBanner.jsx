@@ -3,19 +3,20 @@ import ScoreRing from '@/components/shared/ScoreRing';
 import { RefreshCw, Zap } from 'lucide-react';
 import Link from 'next/link';
 
-export default function ReportHeroBanner({ score, summary, plan, userName = 'there' }) {
+export default function ReportHeroBanner({ score, summaryTitle, summary, scoreSummary, plan, userName = 'there' }) {
   return (
     <div className="rounded-3xl bg-[#064e3b] p-8 md:p-10 text-white mb-8 relative overflow-hidden">
       {/* Decorative background element */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-      
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
         <div className="flex-1">
-          <h2 className="text-3xl font-bold mb-3">Good work, {userName}</h2>
+          <h2 className="text-3xl font-bold mb-1">{summaryTitle ?? 'Good work'}, {userName}</h2>
+          {scoreSummary && (
+            <p className="text-emerald-300 text-xs font-semibold mb-3">{scoreSummary}</p>
+          )}
           <p className="text-emerald-100/80 text-sm md:text-base max-w-2xl leading-relaxed mb-8">
-            You showed solid technical understanding and relevant project exposure. Your answers were strongest when 
-            explaining practical frontend work. The main area to improve is confidence in opening responses and adding more 
-            structured examples in follow-up questions.
+            {summary ?? 'Review your performance below to identify strengths and areas for improvement.'}
           </p>
           
           <div className="flex flex-wrap gap-4">
